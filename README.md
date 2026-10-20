@@ -83,7 +83,7 @@ URLs exactes, formats et licences à **vérifier** avant d'écrire l'ingestion. 
 - `ballots` : scrutin, chambre, date, intitulé, nature (texte entier, article, amendement, motion), dossier, embedding
 - `group_positions` : scrutin × groupe : pour, contre, abstention, non-votants, position majoritaire
 - `vote_explanations` : scrutin × groupe : orateur, texte, URL et ancre du compte rendu
-- `judgments` : mesure × scrutin × groupe × modèle : relation, justification, citations (jsonb), confiance, version du prompt, mapping d'anonymisation
+- `judgments` : mesure × scrutin × groupe × modèle : relation, justification, citations (jsonb), confiance, version du prompt, texte anonymisé envoyé au juge, mapping d'anonymisation
 - `reviews` : verdict humain final sur les désaccords
 
 ## Prototype : les retraites
@@ -114,7 +114,9 @@ Sources : melenchon2027.fr/programme2025/livre, edouardphilippe.fr, republicains
 
 - Jeu de référence d'au moins 30 paires mesure ↔ scrutin annotées à la main, équilibré entre les groupes concernés
 - Accord juge/humain mesuré, accord entre les deux juges (kappa de Cohen)
-- Test de fuite : un modèle ne doit pas deviner le groupe à partir d'un texte anonymisé mieux que le hasard
+- Votes des trois chambres ingérés (Assemblée nationale, Sénat, Parlement européen)
+- Test de fuite : l'anonymiseur ne laisse pas deviner le groupe mieux qu'une anonymisation faite à la main (voir [docs/methodologie.md](docs/methodologie.md))
+- Test contrefactuel : permuter les étiquettes anonymes ne change pas les verdicts
 - Répartition des verdicts par groupe publiée pour repérer un biais systématique
 - Une fiche de preuve HTML par candidat
 
