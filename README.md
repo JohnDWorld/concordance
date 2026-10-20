@@ -70,7 +70,7 @@ Les programmes disent une chose, les réseaux sociaux en disent une autre. Les v
 | Sénat | Scrutins avec positions des groupes (pages HTML seulement, pas d'open data), sénateurs et groupes, comptes rendus | senat.fr (scrutins), data.senat.fr (le reste) |
 | Parlement européen | Votes nominaux (positions de groupe à agréger), groupes, partis nationaux | HowTheyVote.eu (CSV hebdomadaire, github.com/HowTheyVote/data), portail open data du PE à explorer |
 | Programmes | Mesures sourcées | Sites officiels des candidats. 2027etmoi : candidatures sourcées (data.gouv.fr), programmes (GitHub seulement), à recouper avec la source officielle |
-| Contrôle croisé | Positions de groupes déjà calculées | Aucune source trouvée : Datan ne publie pas de positions par scrutin |
+| Contrôle croisé | Votes personnels des candidats parlementaires (jamais source : tout écart est tranché par la source officielle) | 2027etmoi (data.gouv.fr). Datan écarté : pas de positions par scrutin |
 
 URLs, formats et licences vérifiés le 2026-10-20 : voir [docs/sources.md](docs/sources.md).
 

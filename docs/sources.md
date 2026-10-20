@@ -42,6 +42,7 @@ Vérifié le 2026-10-20. Tout ce qui n'a pas pu être confirmé sur la source es
 - Contenu : date, sort, décompte, « Analyse par groupes politiques » (effectif, pour, contre, abstention, non-votants par groupe), listes nominatives (noms, sans matricule). Aucune explication de vote.
 - Exemples lus : scrutin 249 du 2023-03-11 (articles 9 à 20 et ensemble du PLFRSS 2023) https://www.senat.fr/scrutin-public/2022/scr2022-249.html, scrutin 251 du 2023-03-16 (texte de la CMP) https://www.senat.fr/scrutin-public/2022/scr2022-251.html. Scrutins 240 à 248 : articles et amendements du même texte.
 - Fréquence de mise à jour : `TODO: vérifier`.
+- Décision : les pages de scrutin sont récupérées et analysées. Une copie brute de chaque page est conservée dans `data/raw/` avec sa date et son URL.
 
 ### Sénateurs et groupes
 
@@ -100,4 +101,5 @@ Vérifié le 2026-10-20. Tout ce qui n'a pas pu être confirmé sur la source es
 
 ## Contrôle croisé
 
-- Datan (https://www.data.gouv.fr/organizations/datan, Licence Ouverte) : députés et groupes de l'Assemblée uniquement. **Aucune position de groupe par scrutin publiée**, pas de Sénat. Inutilisable pour contrôler les positions de groupes.
+- Retenu : le jeu « votes des candidats » de 2027etmoi (voir plus haut), pour contrôler les votes personnels des candidats parlementaires. Il ne sert jamais de source : tout écart avec les données officielles est signalé, et c'est la source officielle qui fait foi. Le contrôle ne dépend donc pas de l'impartialité de 2027etmoi.
+- Écarté : Datan (https://www.data.gouv.fr/organizations/datan, Licence Ouverte) : députés et groupes de l'Assemblée uniquement. **Aucune position de groupe par scrutin publiée**, pas de Sénat. Inutilisable pour contrôler les positions de groupes.
