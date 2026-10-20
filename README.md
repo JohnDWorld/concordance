@@ -56,7 +56,7 @@ Les programmes disent une chose, les réseaux sociaux en disent une autre. Les v
 
 - **Orchestration** : n8n auto-hébergé (crons d'ingestion, enchaînement des étapes)
 - **Traitements** : Python 3.12, géré avec `uv`
-- **Base** : Supabase (Postgres + pgvector + recherche plein texte en français)
+- **Base** : Supabase auto-hébergé (Postgres + pgvector + recherche plein texte en français), tables dans un schéma dédié `concordance`
 - **IA locale** : Ollama
   - embeddings multilingues (ex. `bge-m3`)
   - deux juges de familles différentes, dimensionnés pour 24 Go de VRAM (ex. un Qwen et un Mistral quantifiés), choix final après évaluation
@@ -90,7 +90,9 @@ URLs exactes, formats et licences à **vérifier** avant d'écrire l'ingestion. 
 
 Premier thème choisi parce qu'il est très voté depuis 2023 et que les positions sont tranchées.
 
-### Mesures de départ (à revérifier à la source)
+Candidats couverts : tous les candidats à la présidentielle 2027, selon la règle d'inclusion de [docs/methodologie.md](docs/methodologie.md). La liste n'est jamais codée en dur.
+
+### Premières mesures repérées (à revérifier à la source, liste non exhaustive)
 
 | Candidat | Mesures |
 |---|---|
@@ -110,7 +112,7 @@ Sources : melenchon2027.fr/programme2025/livre, edouardphilippe.fr, republicains
 
 ### Critère de réussite du prototype
 
-- Jeu de référence de 30 paires mesure ↔ scrutin annotées à la main, équilibré entre les 4 groupes
+- Jeu de référence d'au moins 30 paires mesure ↔ scrutin annotées à la main, équilibré entre les groupes concernés
 - Accord juge/humain mesuré, accord entre les deux juges (kappa de Cohen)
 - Test de fuite : un modèle ne doit pas deviner le groupe à partir d'un texte anonymisé mieux que le hasard
 - Répartition des verdicts par groupe publiée pour repérer un biais systématique
@@ -119,15 +121,14 @@ Sources : melenchon2027.fr/programme2025/livre, edouardphilippe.fr, republicains
 ## Démarrage
 
 ```bash
-cp .env.example .env          # Supabase, Ollama, chemins de données
-docker compose up -d          # n8n (+ Postgres si pas de Supabase local)
+cp .env.example .env          # Postgres (Supabase), Ollama
 uv sync
 uv run python -m concordance.ingest.an --legislatures 16 17
 uv run python -m concordance.pipeline.run --theme retraites
 uv run python -m concordance.eval.run --gold eval/gold_retraites.csv
 ```
 
-*(Commandes cibles, à créer lors de la première session.)*
+*(Commandes cibles, à créer lors de la première session.)* n8n et Supabase tournent déjà sur un serveur auto-hébergé : pas de `docker-compose.yml` dans ce dépôt.
 
 ## Arborescence prévue
 
@@ -136,7 +137,6 @@ concordance/
 ├── README.md
 ├── CLAUDE.md
 ├── .env.example
-├── docker-compose.yml
 ├── pyproject.toml
 ├── supabase/migrations/
 ├── src/concordance/

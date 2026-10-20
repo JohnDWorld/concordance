@@ -20,7 +20,7 @@ Relier chaque promesse des programmes présidentiels 2027 aux votes réels des g
 3. **Double juge** : deux modèles de familles différentes. Désaccord = file `reviews`, jamais de vote à la majorité automatique.
 4. **Pas de source, pas de verdict** : chaque citation est vérifiée par correspondance exacte de chaîne contre le texte source. Citation introuvable = jugement rejeté.
 5. **Ne jamais inventer de données** : URL, format de fichier, identifiant de scrutin, nom de groupe. Si tu ne l'as pas vérifié dans les données ou la doc officielle, écris `TODO: vérifier` et dis-le moi.
-6. **Noms de groupes jamais codés en dur** : ils changent d'une législature à l'autre. Les dériver des données "organes".
+6. **Noms de groupes jamais codés en dur** : ils changent d'une législature à l'autre. Les dériver des données "organes". Idem pour la liste des candidats : elle découle de la règle d'inclusion de `docs/methodologie.md`.
 7. **Groupe n'est pas candidat** : toute sortie précise le lien (membre, allié, ne siège pas).
 
 ## Contrat du juge
@@ -56,7 +56,7 @@ Règles du prompt :
 ## Stack et conventions
 
 - Python 3.12 avec `uv`, typage strict, Pydantic pour tous les schémas, `pytest`.
-- Supabase : schéma uniquement via migrations dans `supabase/migrations/`, jamais de modification à la main.
+- Supabase : schéma uniquement via migrations dans `supabase/migrations/`, jamais de modification à la main. Instance auto-hébergée partagée avec d'autres projets : toutes les tables dans le schéma `concordance`, jamais dans `public`.
 - Ollama en local (RTX 4090, 24 Go) : embeddings multilingues, deux juges choisis après benchmark sur le jeu de référence. Aucun appel à une API d'IA externe dans le pipeline.
 - n8n orchestre (crons, enchaînements) et appelle les scripts Python. La logique métier reste en Python, testable hors n8n. Workflows exportés en JSON dans `n8n/workflows/`.
 - Secrets dans `.env` uniquement, `.env.example` tenu à jour.
@@ -64,11 +64,11 @@ Règles du prompt :
 
 ## Ordre de travail pour la première session
 
-1. Initialiser le dépôt : arborescence du README, `pyproject.toml`, `docker-compose.yml`, `.env.example`, `.gitignore`.
+1. Initialiser le dépôt : arborescence du README, `pyproject.toml`, `.env.example`, `.gitignore`.
 2. Vérifier sur les sites officiels les URLs, formats et licences des jeux de données (Assemblée, Sénat, HowTheyVote). Consigner dans `docs/sources.md`. Me signaler tout ce qui diffère du README.
 3. Migrations Supabase du modèle de données (voir README).
 4. Ingestion Assemblée nationale : scrutins des 16e et 17e législatures, positions par groupe, organes.
-5. Saisie des mesures retraites des 4 candidats depuis leurs sources officielles (citation exacte + URL).
+5. Saisie des mesures retraites de tous les candidats retenus par la règle d'inclusion (`docs/methodologie.md`), depuis leurs sources officielles (citation exacte + URL).
 6. Recherche hybride mesure ↔ scrutins (pgvector + plein texte français), revue manuelle des résultats avec moi.
 7. Anonymiseur + test de fuite, avant d'écrire le moindre prompt de juge.
 8. Prompt `judge_v1`, double juge, évaluation sur le jeu de référence.
