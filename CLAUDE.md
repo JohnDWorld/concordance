@@ -16,7 +16,7 @@ Relier chaque promesse des programmes présidentiels 2027 aux votes réels des g
 ## Règles de neutralité (priorité absolue, au-dessus de la vitesse)
 
 1. **Aucune règle propre à un candidat ou un parti** dans le code ou les prompts. Si un cas particulier semble nécessaire, il devient une règle générale documentée dans `docs/methodologie.md`.
-2. **Juge aveugle** : avant tout appel au juge, `pipeline/anonymize.py` remplace les groupes par `Groupe A/B/C...` (tirage aléatoire par jugement, mapping stocké dans `judgments`) et retire noms de personnes, de partis et termes identifiants (dictionnaire construit depuis les données acteurs et organes, plus une liste de termes comme "insoumis", "lepéniste", "macroniste"). Toute fonction qui envoie du texte au juge sans passer par l'anonymiseur est un bug bloquant.
+2. **Juge aveugle** : avant tout appel au juge, `src/concordance/pipeline/anonymize.py` remplace les groupes par `Groupe A/B/C...` (tirage aléatoire par jugement, mapping stocké dans `judgments`) et retire noms de personnes, de partis et termes identifiants (dictionnaire construit depuis les données acteurs et organes, plus une liste de termes comme "insoumis", "lepéniste", "macroniste"). Toute fonction qui envoie du texte au juge sans passer par l'anonymiseur est un bug bloquant.
 3. **Double juge** : deux modèles de familles différentes. Désaccord = file `reviews`, jamais de vote à la majorité automatique.
 4. **Pas de source, pas de verdict** : chaque citation est vérifiée par correspondance exacte de chaîne contre le texte exact envoyé au juge (donc anonymisé). Citation introuvable = jugement rejeté. Les vrais noms ne sont rétablis qu'à la publication, via le mapping stocké dans `judgments`.
 5. **Ne jamais inventer de données** : URL, format de fichier, identifiant de scrutin, nom de groupe. Si tu ne l'as pas vérifié dans les données ou la doc officielle, écris `TODO: vérifier` et dis-le moi.
@@ -48,10 +48,12 @@ Règles du prompt :
 
 ## Évaluation (à lancer après toute modification du prompt, du modèle ou de l'anonymiseur)
 
-- `eval/gold_retraites.csv` : paires annotées à la main, équilibrées entre groupes.
+Code dans `src/concordance/eval/`, données dans `eval/`.
+
+- `eval/gold_retraites.csv` : paires annotées à la main, équilibrées entre groupes, avec une version anonymisée à la main de chaque texte.
 - Accord juge/humain et kappa entre les deux juges.
-- **Test de fuite** (`eval/leakage.py`) : un modèle tente de deviner le groupe depuis le texte anonymisé. Au-dessus du hasard + marge = l'anonymisation fuit, à corriger avant tout le reste.
-- **Biais** (`eval/bias.py`) : répartition des verdicts par groupe, et test contrefactuel en permutant les étiquettes anonymes. Résultats publiés dans `docs/`.
+- **Test de fuite** (`src/concordance/eval/leakage.py`) : un modèle tente de deviner le groupe, une fois sur la version anonymisée à la main (fuite de référence, ce que le fond trahit), une fois sur la sortie de l'anonymiseur. Sortie de l'anonymiseur au-dessus de la référence + marge = l'anonymiseur fuit, à corriger avant tout le reste. Le hasard n'est pas la cible : le contenu politique identifie un bord, aucun anonymiseur ne peut l'effacer.
+- **Biais** (`src/concordance/eval/bias.py`) : répartition des verdicts par groupe, et test contrefactuel : permuter les étiquettes `Groupe X` ne doit pas changer le verdict. C'est le garde-fou principal contre le biais. Résultats publiés dans `docs/`.
 
 ## Stack et conventions
 
