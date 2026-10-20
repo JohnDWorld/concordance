@@ -83,7 +83,7 @@ URLs exactes, formats et licences à **vérifier** avant d'écrire l'ingestion. 
 - `ballots` : scrutin, chambre, date, intitulé, nature (texte entier, article, amendement, motion), dossier, embedding
 - `group_positions` : scrutin × groupe : pour, contre, abstention, non-votants, position majoritaire
 - `vote_explanations` : scrutin × groupe : orateur, texte, URL et ancre du compte rendu
-- `judgments` : mesure × scrutin × groupe × modèle : relation, justification, citations (jsonb), confiance, version du prompt, mapping d'anonymisation
+- `judgments` : mesure × scrutin × groupe × modèle : relation, justification, citations (jsonb), confiance, version du prompt, texte anonymisé envoyé au juge, mapping d'anonymisation
 - `reviews` : verdict humain final sur les désaccords
 
 ## Prototype : les retraites

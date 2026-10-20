@@ -9,3 +9,7 @@ Une seule règle, appliquée à tous les candidats sans exception :
 3. À la publication de la liste officielle, elle remplace la règle 1. Les candidats déclarés qui n'y figurent pas sont archivés : leurs fiches restent consultables avec la mention « absent de la liste officielle », rien n'est supprimé.
 4. Un candidat à une primaire est inclus tant qu'il est en lice. S'il est battu, il est archivé comme à la règle 3.
 5. Chaque entrée ou sortie de la liste est datée et sourcée (déclaration de candidature, résultat de primaire, retrait, publication officielle).
+
+## Vérification des citations
+
+Chaque citation du juge est vérifiée par correspondance exacte avec le texte qui lui a été envoyé, c'est-à-dire le texte anonymisé. Une citation introuvable entraîne le rejet du jugement. Les vrais noms ne sont rétablis qu'à la publication, à partir de la correspondance entre étiquettes et groupes conservée avec chaque jugement.
