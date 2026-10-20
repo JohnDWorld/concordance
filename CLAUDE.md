@@ -67,7 +67,7 @@ Règles du prompt :
 1. Initialiser le dépôt : arborescence du README, `pyproject.toml`, `.env.example`, `.gitignore`.
 2. Vérifier sur les sites officiels les URLs, formats et licences des jeux de données (Assemblée, Sénat, HowTheyVote). Consigner dans `docs/sources.md`. Me signaler tout ce qui diffère du README.
 3. Migrations Supabase du modèle de données (voir README).
-4. Ingestion Assemblée nationale : scrutins des 16e et 17e législatures, positions par groupe, organes.
+4. Ingestion des trois chambres, toutes nécessaires au prototype complet : Assemblée nationale d'abord (scrutins des 16e et 17e législatures, positions par groupe, organes), puis Sénat (scrutins, positions des groupes, comptes rendus), puis Parlement européen (votes nominaux, groupes). Périodes exactes à fixer après l'étape 2.
 5. Saisie des mesures retraites de tous les candidats retenus par la règle d'inclusion (`docs/methodologie.md`), depuis leurs sources officielles (citation exacte + URL).
 6. Recherche hybride mesure ↔ scrutins (pgvector + plein texte français), revue manuelle des résultats avec moi.
 7. Anonymiseur + test de fuite, avant d'écrire le moindre prompt de juge.
