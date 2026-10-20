@@ -23,6 +23,10 @@ L'anonymiseur est accepté si son taux ne dépasse pas la référence au-delà d
 
 Le garde-fou principal contre le biais est le test contrefactuel : on permute les étiquettes `Groupe A`, `Groupe B`... et le verdict ne doit pas changer.
 
+## Explication de vote absente
+
+Quand aucune explication de vote n'est disponible pour un groupe (pas d'intervention, source non exploitable), la fiche l'indique : « explication non disponible ». Elle n'est jamais remplacée par un résumé, une déduction ou un autre texte.
+
 ## Vérification des citations
 
 Chaque citation du juge est vérifiée par correspondance exacte avec le texte qui lui a été envoyé, c'est-à-dire le texte anonymisé. Une citation introuvable entraîne le rejet du jugement. Les vrais noms ne sont rétablis qu'à la publication, à partir de la correspondance entre étiquettes et groupes conservée avec chaque jugement.
