@@ -4,8 +4,8 @@ Vérifié le 2026-10-20. Tout ce qui n'a pas pu être confirmé sur la source es
 
 ## Assemblée nationale
 
-- Licence : « Licence Ouverte / Open Licence », https://data.assemblee-nationale.fr/licence-ouverte-open-licence. Version : `TODO: vérifier`.
-- Disponibilité : data.assemblee-nationale.fr et www.assemblee-nationale.fr répondent souvent 503 (le 2026-10-20, toute la journée pour certaines pages). Les archives zip se téléchargent. L'ingestion doit réessayer avec un délai croissant.
+- Licence : « Licence Ouverte / Open Licence » version 1.0 (Etalab), https://data.assemblee-nationale.fr/licence-ouverte-open-licence, texte : https://data.assemblee-nationale.fr/content/download/28755/file/Licence_Ouverte.pdf.
+- Disponibilité : data.assemblee-nationale.fr et www.assemblee-nationale.fr ont répondu 503 une grande partie de la journée, puis 200 le soir. Les archives zip sous `/static/openData/` se téléchargent même pendant les 503. L'ingestion doit réessayer avec un délai croissant.
 
 ### Scrutins
 
@@ -14,11 +14,11 @@ Vérifié le 2026-10-20. Tout ce qui n'a pas pu être confirmé sur la source es
 | 17 | https://data.assemblee-nationale.fr/static/openData/repository/17/loi/scrutins/Scrutins.json.zip | 27,6 Mo | 2026-10-20 |
 | 16 | https://data.assemblee-nationale.fr/static/openData/repository/16/loi/scrutins/Scrutins.json.zip | 10,1 Mo | 2024-06-28 (close) |
 
-- Format : un JSON par scrutin, `json/VTANR5L{législature}V{numéro}.json`, racine `scrutin`. Les nombres sont encodés en chaînes. Version XML : `TODO: vérifier` (503).
-- Champs : `uid`, `numero`, `legislature`, `dateScrutin`, `typeVote.codeTypeVote` / `libelleTypeVote`, `sort.code`, `titre`, `objet.libelle`, `demandeur.texte`, `syntheseVote.decompte` (`pour`, `contre`, `abstentions`, `nonVotants`), `syntheseVote.nbrSuffragesRequis`.
+- Format : un JSON par scrutin, `json/VTANR5L{législature}V{numéro}.json`, racine `scrutin`. Les nombres sont encodés en chaînes. Version XML : `TODO: vérifier`.
+- Champs : `uid`, `numero`, `legislature`, `seanceRef`, `dateScrutin`, `typeVote.codeTypeVote` / `libelleTypeVote`, `sort.code`, `titre`, `objet.libelle`, `demandeur.texte`, `syntheseVote.decompte` (`pour`, `contre`, `abstentions`, `nonVotants`), `syntheseVote.nbrSuffragesRequis`.
 - Positions par groupe : `ventilationVotes.organe.groupes.groupe[]` avec `organeRef`, `nombreMembresGroupe`, `vote.positionMajoritaire`, `vote.decompteVoix` (`pour`, `contre`, `abstentions`, `nonVotants`, `nonVotantsVolontaires`), `vote.decompteNominatif` (`votant[]` : `acteurRef`, `mandatRef`, `causePositionVote`, `parDelegation`).
+- Page publique : `https://www.assemblee-nationale.fr/dyn/{législature}/scrutins/{numéro}`, par exemple https://www.assemblee-nationale.fr/dyn/16/scrutins/1240.
 - Exemple lu : `VTANR5L16V1240` et `VTANR5L16V1241`, motions de censure du 2023-03-20 sur la réforme des retraites, rejetées (278 et 94 voix pour, 287 requises).
-- URL publique d'une page de scrutin : `TODO: vérifier` (site en 503).
 
 ### Acteurs et organes
 
@@ -27,10 +27,25 @@ Vérifié le 2026-10-20. Tout ce qui n'a pas pu être confirmé sur la source es
 - Champs d'un organe : `uid`, `codeType` (`GP` pour un groupe politique), `libelle`, `libelleAbrev`, `viMoDe.dateDebut` / `dateFin`, `legislature`.
 - Jointure vérifiée : `organeRef` d'un groupe dans un scrutin = `uid` de l'organe dans AMO. Uid et libellés changent d'une législature à l'autre.
 
-### Amendements et comptes rendus
+### Comptes rendus de séance (explications de vote)
 
-- Amendements (exposé sommaire) : `TODO: vérifier` (503).
-- Comptes rendus de séance, source des explications de vote : `TODO: vérifier` (503). Source indispensable au projet.
+- Page : https://data.assemblee-nationale.fr/travaux-parlementaires/debats. Fichiers (format XML « Syceron ») :
+  - 17 : https://data.assemblee-nationale.fr/static/openData/repository/17/vp/syceronbrut/syseron.xml.zip (58,6 Mo, 631 séances)
+  - 16 : https://data.assemblee-nationale.fr/static/openData/repository/16/vp/syceronbrut/syseron.xml.zip (57,6 Mo, 605 séances)
+  - Piège : la page affiche le chemin `/VP/` en majuscules, qui renvoie 404. Seul `/vp/` fonctionne.
+- Structure : `xml/compteRendu/CRSANR5L{lég}S{année}O1N{n}.xml`, racine `compteRendu` avec `uid`, `seanceRef`, `metadonnees` (`dateSeance`, `numSeance`, `legislature`), `contenu`. Chaque `paragraphe` porte `id_syceron`, `id_acteur` (PA...), `id_mandat` (PM...), `ordre_absolu_seance`, `roledebat`. Trier par `ordre_absolu_seance` (`id_syceron` n'est pas chronologique).
+- Lien avec les scrutins : `seanceRef` du compte rendu = `seanceRef` des scrutins de la séance (vérifié sur 1240 et 1241). Le scrutin précis dans la séance se déduit du titre et de l'ordre.
+- Explications de vote : aucune balise dédiée. Repérage par la phrase de la présidence (« Nous en venons aux explications de vote »).
+- Groupe de l'orateur : absent du compte rendu. À dériver soit de `vote.decompteNominatif` du scrutin (l'`acteurRef` y figure dans son groupe), soit de `id_mandat` via AMO. `TODO: vérifier` les deux jointures.
+- Ancre publique : `id_syceron` = ancre HTML. `https://www.assemblee-nationale.fr/dyn/16/comptes-rendus/seance/CRSANR5L16S2023O1N182` redirige vers l'URL lisible de la séance.
+- Exemple vérifié (texte identique dans le XML et la page publique) : « C’est pourquoi les députés du groupe Horizons et apparentés ne voteront pas en faveur des motions de censure. », https://www.assemblee-nationale.fr/dyn/16/comptes-rendus/seance/session-ordinaire-de-2022-2023/premiere-seance-du-lundi-20-mars-2023#3056182.
+
+### Amendements
+
+- Page : https://data.assemblee-nationale.fr/travaux-parlementaires/amendements/tous-les-amendements.
+- 17 : https://data.assemblee-nationale.fr/static/openData/repository/17/loi/amendements_div_legis/Amendements.json.zip (344 Mo, 141 194 JSON). 16 : même chemin avec `16`.
+- Champs : `uid`, `identification.numeroLong`, `signataires.auteur.acteurRef`, `signataires.auteur.groupePolitiqueRef`, `corps.contenuAuteur.exposeSommaire` (HTML), `corps.contenuAuteur.dispositif`, `cycleDeVie.dateDepot`, `cycleDeVie.sort`, `cycleDeVie.dateSort`, `seanceDiscussionRef` (souvent vide).
+- Lien avec les scrutins : aucun champ direct. À déduire par séance et par le titre du scrutin (« l'amendement n° 70 de... »). `TODO: vérifier` sur un cas réel.
 
 ## Sénat
 
@@ -47,15 +62,22 @@ Vérifié le 2026-10-20. Tout ce qui n'a pas pu être confirmé sur la source es
 ### Sénateurs et groupes
 
 - Page : https://data.senat.fr/les-senateurs/ ; export complet https://data.senat.fr/data/senateurs/export_sens.zip (8,5 Mo).
-- `ODSEN_HISTOGROUPES.csv` : `Matricule`, `Code du groupe politique`, `Nom court du groupe politique`, `Date de début d'appartenance`, `Date de fin d'appartenance`, etc. `ODSEN_GENERAL.csv` : `Matricule`, `Groupe politique`, etc. URL exacte des CSV : `TODO: vérifier`.
+- https://data.senat.fr/data/senateurs/ODSEN_HISTOGROUPES.csv : `Matricule`, `Id appartenance`, `Nom`, `Code du groupe politique`, `Nom court du groupe politique`, `Date de début d'appartenance`, `Date de fin d'appartenance`, `Nom court fonction`. Plusieurs lignes par sénateur (une par période et par fonction) : filtrer par date. `ODSEN_GENERAL.csv` : `Matricule`, `Groupe politique`, etc.
 - Format : ISO-8859-1, CRLF, virgule, lignes `%` avant l'en-tête.
-- Jointure avec les pages de scrutin : par libellé de groupe et nom de sénateur (pas de matricule sur les pages). Libellés variables (« Union Centriste » en 2023, « Union Centriste et Indépendants » en 2026). `TODO: vérifier` la fiabilité de cette jointure.
+- Codes de groupe anciens (`UMP` pour le groupe Les Républicains) et libellés variables (« Union Centriste » en 2023, « Union Centriste et Indépendants » en 2026).
 
-### Comptes rendus
+### Comptes rendus (explications de vote)
 
-- Page : https://data.senat.fr/la-base-comptes-rendus/ (depuis 2003).
-- `debats.zip` (33,8 Mo, dump PostgreSQL) et `cri.zip` (545 Mo, un XML par séance `cri/dAAAAMMJJ.xml`, intervenants avec `mat` et `nom`, sans groupe). ISO-8859-1.
-- Explications de vote : non localisées dans l'échantillon lu (2012). `TODO: vérifier` sur une séance récente, et la jointure `mat` / `Matricule`.
+- Page : https://data.senat.fr/la-base-comptes-rendus/ (depuis 2003). Fichiers :
+  - https://data.senat.fr/data/debats/cri.zip (545 Mo, un XML par séance `cri/dAAAAMMJJ.xml`) ;
+  - `debats.zip` (33,8 Mo, dump PostgreSQL).
+- XML : namespace `http://senat.fr/schemas/thb/cri`, ISO-8859-1, **mal formé** (un parseur XML strict échoue, il faut un parseur tolérant). Intervenants : `cri:intervenant` avec `mat`, `nom`, `parid`, sans groupe.
+- Explications de vote : `<divers type="2" libelle="Explications de vote sur l'ensemble">`. Le numéro de scrutin figure dans `cri:tm6` (« Adoption, par scrutin public n° 249 ») et les totaux dans `cri:scrutin1` / `cri:scrutin2` (identiques à ceux des pages de scrutin).
+- Groupe de l'orateur : jointure `mat` (XML) = `Matricule` (ODSEN) vérifiée sur 4 orateurs.
+- Version HTML : `https://www.senat.fr/cra/s{AAAAMMJJ}/s{AAAAMMJJ}_som.html` (sommaire), `_0.html` à `_7.html`, `_mono.html` (séance entière). Chaque paragraphe a une ancre `#par_{n}`.
+- **Le texte diffère entre le XML et le HTML** (formulations, apostrophes), et les identifiants `parid` du XML ne correspondent pas aux ancres HTML. Conséquence : les citations viennent du HTML public (ancré). Le XML sert à la structure (orateur, section, scrutin) et l'appariement avec le HTML se fait par orateur et par texte.
+- Exemple vérifié (HTML) : « La CMP a marqué une étape importante, après un examen tronqué à l'Assemblée nationale. », https://www.senat.fr/cra/s20230316/s20230316_0.html#par_463.
+- `TODO: vérifier` : sens des attributs `type`, `analyse`, `checked` ; numéro 251 absent du HTML du 16 mars ; rythme de mise à jour (non documenté).
 
 ### Dossiers législatifs et amendements
 
@@ -75,11 +97,15 @@ Vérifié le 2026-10-20. Tout ce qui n'a pas pu être confirmé sur la source es
 
 ### Portail open data du PE
 
-- API v2 en JSON-LD, par exemple https://data.europarl.europa.eu/api/v2/meps. Point d'accès des votes : `TODO: vérifier`. Licence : `TODO: vérifier`.
+- API : https://data.europarl.europa.eu/api/v2/ (description OpenAPI). Exige l'en-tête `Accept: application/ld+json` (sinon 406). Licence de l'API : CC BY 4.0.
+- Routes confirmées : `/meps`, `/speeches`, `/meetings`, `/plenary-documents`, `/meetings/{id}/vote-results` (résultats de vote liés au rapport, sans vote par député).
+- Le vocabulaire `ep-activities` contient `VOTE_EXPLANATION_ORAL` et `VOTE_EXPLANATION_WRITTEN`, mais `/speeches` filtré sur ces types ne renvoie aucun résultat : explications de vote non indexées dans l'API à ce jour.
 
-### Explications de vote
+### Site europarl.europa.eu
 
-- `TODO: vérifier` : lieu de publication, format, lien avec un vote.
+- Notice légale (https://www.europarl.europa.eu/legal-notice/en/) : réutilisation autorisée, avec la mention « © European Union, [année] - Source: European Parliament ». Une reproduction partielle doit citer l'URL de l'élément complet.
+- Explications de vote : les comptes rendus in extenso (pages `doceo`, par exemple `CRE-10-2025-06-18-ITM-017`) contiennent une section « explications de vote orales », vue seulement dans des résultats de recherche. Les pages `doceo` renvoient 202 avec un corps vide aux clients automatisés (protection anti-robot).
+- `TODO: vérifier` : contenu réel d'un CRE de la 10e législature, publication des explications écrites (fiches des députés ?), et si une explication est individuelle (par député) ou de groupe, ce qui change le contrat du juge.
 
 ## Programmes et candidatures
 
