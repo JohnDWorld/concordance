@@ -29,7 +29,7 @@ Les programmes disent une chose, les réseaux sociaux en disent une autre. Les v
 | Piège | Exemple | Traitement |
 |---|---|---|
 | Texte composite | Un budget ou une loi fourre-tout | `nature_du_vote` renseignée, verdict souvent `ambigu` |
-| Pas de vote direct | Réforme des retraites 2023 adoptée par 49.3 à l'Assemblée : le seul vote est la motion de censure du 20 mars 2023 | Signalé comme vote indirect |
+| Pas de vote direct | Réforme des retraites 2023 adoptée par 49.3 à l'Assemblée : les seuls votes sont les deux motions de censure du 20 mars 2023 | Signalé comme vote indirect |
 | Vote contre le gouvernement | Motion de censure, motion de rejet | Distingué d'un vote sur le fond |
 | Abstention, absence | Groupe divisé ou non-votant | Rapporté, jamais interprété |
 | Candidat non parlementaire | Philippe est maire, Retailleau a surtout siégé au Sénat puis été ministre | On compare le groupe, avec mention explicite |
@@ -67,12 +67,12 @@ Les programmes disent une chose, les réseaux sociaux en disent une autre. Les v
 | Source | Contenu utile | Point d'entrée |
 |---|---|---|
 | Assemblée nationale | Scrutins publics, positions par groupe, amendements (exposés sommaires), comptes rendus de séance (explications de vote), acteurs et organes | data.assemblee-nationale.fr |
-| Sénat | Scrutins, positions des groupes, comptes rendus | data.senat.fr |
-| Parlement européen | Votes nominaux, groupes, eurodéputés | HowTheyVote.eu (CSV hebdomadaire, github.com/HowTheyVote/data) et portail open data du PE |
-| Programmes | Mesures sourcées | Sites officiels des candidats, jeux de données de 2027etmoi (data.gouv.fr, GitHub) |
-| Contrôle croisé | Positions de groupes déjà calculées | Datan (data.gouv.fr) |
+| Sénat | Scrutins avec positions des groupes (pages HTML seulement, pas d'open data), sénateurs et groupes, comptes rendus | senat.fr (scrutins), data.senat.fr (le reste) |
+| Parlement européen | Votes nominaux (positions de groupe à agréger), groupes, partis nationaux | HowTheyVote.eu (CSV hebdomadaire, github.com/HowTheyVote/data), portail open data du PE à explorer |
+| Programmes | Mesures sourcées | Sites officiels des candidats. 2027etmoi : candidatures sourcées (data.gouv.fr), programmes (GitHub seulement), à recouper avec la source officielle |
+| Contrôle croisé | Votes personnels des candidats parlementaires (jamais source : tout écart est tranché par la source officielle) | 2027etmoi (data.gouv.fr). Datan écarté : pas de positions par scrutin |
 
-URLs exactes, formats et licences à **vérifier** avant d'écrire l'ingestion. Licence de chaque jeu de données à noter dans `docs/sources.md`.
+URLs, formats et licences vérifiés le 2026-10-20 : voir [docs/sources.md](docs/sources.md).
 
 ## Modèle de données (première version)
 
@@ -101,11 +101,11 @@ Candidats couverts : tous les candidats à la présidentielle 2027, selon la rè
 | Retailleau (LR) | Âge légal à 65 ans · compte d'épargne retraite pour chaque actif en plus de la répartition · cumul emploi-retraite sans cotisations |
 | Le Pen (RN) | Refuser tout recul de l'âge · 60 ans pour qui a commencé avant 20 ans avec 40 annuités · minimum vieillesse à 1 000 €, pensions réindexées sur l'inflation |
 
-Sources : melenchon2027.fr/programme2025/livre, edouardphilippe.fr, republicains.fr/qrtravail, rassemblementnational.fr/22-mesures, Euronews (9 oct. 2026) pour les annonces de Philippe, LCP (19 juin 2026) pour la synthèse.
+Sources : melenchon2027.fr/programme2025/livre, edouardphilippe.fr, republicains.fr/qrtravail, rassemblementnational.fr/22-mesures (programme de 2022, à remplacer), Euronews (9 oct. 2026) pour les annonces de Philippe, LCP (19 juin 2026) pour la synthèse.
 
 ### Scrutins à identifier dans les données
 
-- Réforme 2023 : votes du Sénat sur le texte, motion de censure du 20 mars 2023 à l'Assemblée (vote indirect)
+- Réforme 2023 : votes du Sénat sur le texte, motions de censure du 20 mars 2023 à l'Assemblée (vote indirect)
 - Propositions de loi d'abrogation déposées depuis 2024 (à retrouver, vérifier ce qui a réellement été voté)
 - Suspension de la réforme dans le budget de la Sécurité sociale, automne 2025 (article ou amendement à identifier)
 - Parlement européen : peu de votes attendus, la retraite est une compétence nationale
@@ -155,4 +155,4 @@ concordance/
 
 ## Licence
 
-Code sous AGPL-3.0 pour que toute version publique reste ouverte. Chaque jeu de données garde sa licence d'origine (Licence Ouverte Etalab pour les données publiques françaises, à vérifier pour les autres).
+Code sous AGPL-3.0 pour que toute version publique reste ouverte. Chaque jeu de données garde sa licence d'origine : Licence Ouverte pour l'Assemblée, le Sénat et data.gouv.fr, ODbL pour HowTheyVote (toute base dérivée publiée doit rester sous ODbL).
