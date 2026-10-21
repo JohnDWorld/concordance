@@ -41,8 +41,8 @@ Les programmes disent une chose, les réseaux sociaux en disent une autre. Les v
  Sources officielles            Stockage                 Traitement local (RTX 4090)
  ─────────────────────          ─────────────            ───────────────────────────
  Assemblée nationale  ─┐                                  
- Sénat                 ├─ n8n ─▶ Postgres dédiée     ─▶ 1. Mesures atomiques
- Parlement européen   ─┤  cron   + pgvector             2. Embeddings (Ollama)
+ Sénat                 ├─ timer▶ Postgres dédiée     ─▶ 1. Mesures atomiques
+ Parlement européen   ─┤         + pgvector             2. Embeddings (Ollama)
  Programmes           ─┘                                 3. Recherche hybride mesure ↔ scrutins
                                                          4. Anonymisation + test de fuite
                                                          5. Double juge LLM (Ollama)
@@ -54,7 +54,7 @@ Les programmes disent une chose, les réseaux sociaux en disent une autre. Les v
 
 ### Stack
 
-- **Orchestration** : n8n auto-hébergé (crons d'ingestion, enchaînement des étapes)
+- **Orchestration** : timers systemd sur le serveur, sous un utilisateur dédié (pas de n8n : l'instance existante est partagée avec d'autres projets)
 - **Traitements** : Python 3.12, géré avec `uv`
 - **Base** : Postgres 17 + pgvector dans un conteneur dédié (`docker-compose.yml`), recherche plein texte en français, migrations gérées avec le CLI Supabase. Jamais partagée avec un autre projet
 - **IA locale** : Ollama
@@ -133,7 +133,7 @@ uv run python -m concordance.pipeline.run --theme retraites
 uv run python -m concordance.eval.run --gold eval/gold_retraites.csv
 ```
 
-*(Commandes cibles, à créer lors de la première session.)* n8n tourne sur un serveur auto-hébergé. La base est dédiée à Concordance : projet public, une fuite ne doit exposer que ses propres données.
+*(Commandes cibles, à créer lors de la première session.)* Base et tâches planifiées sont dédiées à Concordance : projet public, une fuite ne doit exposer que ses propres données.
 
 ## Arborescence prévue
 
@@ -151,7 +151,7 @@ concordance/
 │   ├── publish/       # génération des fiches HTML
 │   └── eval/          # run.py, leakage.py, bias.py
 ├── prompts/           # judge_v1.md, split_measures_v1.md (versionnés)
-├── n8n/workflows/     # exports JSON
+├── deploy/systemd/    # timers et services
 ├── eval/              # gold_retraites.csv
 ├── docs/              # methodologie.md, sources.md
 └── tests/
