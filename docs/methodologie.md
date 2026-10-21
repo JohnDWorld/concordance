@@ -37,3 +37,18 @@ Quand aucune explication de vote n'est disponible pour un groupe (pas d'interven
 ## Vérification des citations
 
 Chaque citation du juge est vérifiée par correspondance exacte avec le texte qui lui a été envoyé, c'est-à-dire le texte anonymisé. Une citation introuvable entraîne le rejet du jugement. Les vrais noms ne sont rétablis qu'à la publication, à partir de la correspondance entre étiquettes et groupes conservée avec chaque jugement.
+
+## Présentation
+
+- Le rendu doit être lisible par quelqu'un qui ne suit pas la politique : une phrase simple, les chiffres complets, la source officielle à un clic, chaque terme technique expliqué (amendement, motion de censure, commission mixte paritaire...).
+- Toute l'information est montrée, jamais une partie choisie.
+- Chaque groupe est désigné par un badge identique pour tous : sigle et nom complet, sans logo ni couleur. Un logo est un élément de communication, protégé et chargé d'émotion ; une couleur oriente la lecture avant les chiffres.
+
+## Amendements
+
+Prototype : amendements déposés à l'Assemblée sur la réforme des retraites de 2023.
+
+- Mêmes mesures pour tous les groupes, calculées par une règle unique et publiée.
+- Uniquement des faits mesurés : aucune qualification de l'intention (« obstruction », « travail sérieux »...). Le lecteur juge.
+- Aucun classement : un tableau identique pour chaque groupe, dans un ordre neutre.
+- Mesures prévues : nombre d'amendements déposés, sort (adopté, rejeté, tombé, non soutenu, retiré, non examiné), amendements identiques ou en série, ampleur de la modification proposée. Définitions précises : `TODO: vérifier` sur les données, à valider avant publication.
