@@ -58,7 +58,7 @@ Code dans `src/concordance/eval/`, données dans `eval/`.
 ## Stack et conventions
 
 - Python 3.12 avec `uv`, typage strict, Pydantic pour tous les schémas, `pytest`.
-- Supabase : schéma uniquement via migrations dans `supabase/migrations/`, jamais de modification à la main. Instance auto-hébergée partagée avec d'autres projets : toutes les tables dans le schéma `concordance`, jamais dans `public`.
+- Base : Postgres 17 + pgvector dans un conteneur dédié (`docker-compose.yml`), jamais partagée avec un autre projet (projet public : une fuite ne doit exposer que Concordance). Schéma uniquement via migrations dans `supabase/migrations/` (CLI Supabase), jamais de modification à la main. Tables dans le schéma `concordance`.
 - Ollama en local (RTX 4090, 24 Go) : embeddings multilingues, deux juges choisis après benchmark sur le jeu de référence. Aucun appel à une API d'IA externe dans le pipeline.
 - n8n orchestre (crons, enchaînements) et appelle les scripts Python. La logique métier reste en Python, testable hors n8n. Workflows exportés en JSON dans `n8n/workflows/`.
 - Secrets dans `.env` uniquement, `.env.example` tenu à jour.
@@ -68,7 +68,7 @@ Code dans `src/concordance/eval/`, données dans `eval/`.
 
 1. Initialiser le dépôt : arborescence du README, `pyproject.toml`, `.env.example`, `.gitignore`.
 2. Vérifier sur les sites officiels les URLs, formats et licences des jeux de données (Assemblée, Sénat, HowTheyVote). Consigner dans `docs/sources.md`. Me signaler tout ce qui diffère du README.
-3. Migrations Supabase du modèle de données (voir README).
+3. Migrations du modèle de données (voir README).
 4. Ingestion des trois chambres, toutes nécessaires au prototype complet : Assemblée nationale d'abord (scrutins des 16e et 17e législatures, positions par groupe, organes), puis Sénat (scrutins, positions des groupes, comptes rendus), puis Parlement européen (votes nominaux, groupes). Périodes exactes à fixer après l'étape 2.
 5. Saisie des mesures retraites de tous les candidats retenus par la règle d'inclusion (`docs/methodologie.md`), depuis leurs sources officielles (citation exacte + URL).
 6. Recherche hybride mesure ↔ scrutins (pgvector + plein texte français), revue manuelle des résultats avec moi.

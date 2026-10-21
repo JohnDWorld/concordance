@@ -1,0 +1,15 @@
+# Base dédiée à Concordance, jamais partagée avec un autre projet.
+services:
+  db:
+    image: pgvector/pgvector:0.8.7-pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD manquant dans .env}
+      POSTGRES_DB: concordance
+    ports:
+      - "${DB_BIND:-127.0.0.1}:${DB_PORT:-5432}:5432"
+    volumes:
+      - db:/var/lib/postgresql/data
+
+volumes:
+  db:
