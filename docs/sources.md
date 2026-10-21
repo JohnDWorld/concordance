@@ -19,6 +19,10 @@ Vérifié le 2026-10-20. Tout ce qui n'a pas pu être confirmé sur la source es
 - Positions par groupe : `ventilationVotes.organe.groupes.groupe[]` avec `organeRef`, `nombreMembresGroupe`, `vote.positionMajoritaire`, `vote.decompteVoix` (`pour`, `contre`, `abstentions`, `nonVotants`, `nonVotantsVolontaires`), `vote.decompteNominatif` (`votant[]` : `acteurRef`, `mandatRef`, `causePositionVote`, `parDelegation`).
 - Page publique : `https://www.assemblee-nationale.fr/dyn/{législature}/scrutins/{numéro}`, par exemple https://www.assemblee-nationale.fr/dyn/16/scrutins/1240.
 - Exemple lu : `VTANR5L16V1240` et `VTANR5L16V1241`, motions de censure du 2023-03-20 sur la réforme des retraites, rejetées (278 et 94 voix pour, 287 requises).
+- `positionMajoritaire` est renseigné même pour un groupe qui n'a exprimé aucun vote (motion de censure : « pour » à 0 voix). Il n'est pas repris dans ce cas (voir `methodologie.md`).
+- Défaut de la source : 146 positions de la 17e législature ont `organeRef` = `PO0` (groupe non identifié), dans 14 scrutins : n° 489 à 501 (2024-12-02, tous les groupes), 1302 et 6256 (un groupe chacun). Ces positions ne sont pas chargées, les scrutins le sont. Le groupe pourrait être retrouvé via les votants (`decompteNominatif`) : `TODO: vérifier` si nécessaire.
+- Le scrutin du Congrès (16e, n° 1, 2024-03-04, `codeTypeVote` = `SSG`) contient les groupes du Sénat : non chargé.
+- Le serveur peut couper un téléchargement sans erreur (fichier AMO30 reçu à 2 Mo sur 13,7 le 2026-10-21) : la taille reçue est comparée à `Content-Length`, et le téléchargement est relancé en cas d'écart.
 
 ### Acteurs et organes
 
