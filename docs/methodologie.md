@@ -26,8 +26,9 @@ Le garde-fou principal contre le biais est le test contrefactuel : on permute le
 ## Données de vote
 
 - **Chiffres rapportés tels quels** : pour, contre, abstention, non-votants et, à l'Assemblée, non-votants volontaires, sans regroupement ni interprétation.
-- **Position majoritaire** : reprise de la source, sauf quand le groupe n'a exprimé aucun vote (ni pour, ni contre, ni abstention). Elle reste alors vide. Exemple : sur une motion de censure, seuls les votes « pour » sont décomptés ; un groupe qui ne la vote pas n'est ni « pour » ni « contre ».
-- **Nature du scrutin** (Assemblée) : déduite du début de l'intitulé, par une règle unique pour tous. Motion de censure ou intitulé commençant par « la motion » : `motion`. « l'amendement », « le sous-amendement », « les amendements » : `amendement`. « l'article » : `article`. « l'ensemble » : `texte_entier`. Sinon, nature non renseignée plutôt que devinée.
+- **Position majoritaire** : reprise de la source, sauf quand le groupe n'a exprimé aucun vote (ni pour, ni contre, ni abstention). Elle reste alors vide. Exemple : sur une motion de censure, seuls les votes « pour » sont décomptés ; un groupe qui ne la vote pas n'est ni « pour » ni « contre ». Quand la source ne la donne pas (Sénat, Parlement européen), elle est calculée : la position qui a le plus de voix entre pour, contre et abstention, vide en cas d'égalité en tête ou sans vote exprimé.
+- **Groupes du Sénat** : libellé actuel de l'export officiel des sénateurs. Un changement de nom en cours de période (« Union Centriste » devenu « Union Centriste et Indépendants ») n'est pas historisé ; le code du groupe, lui, ne change pas.
+- **Nature du scrutin** (Assemblée et Sénat, dont l'intitulé commence par « sur ») : déduite du début de l'intitulé, par une règle unique pour tous. Motion de censure ou intitulé commençant par « la motion » : `motion`. « l'amendement », « le sous-amendement », « les amendements » : `amendement`. « l'article » : `article`. « l'ensemble » : `texte_entier`. Sinon, nature non renseignée plutôt que devinée.
 - **Congrès** : les scrutins du Parlement réuni en Congrès ne sont pas rattachés à l'Assemblée seule.
 
 ## Explication de vote absente
