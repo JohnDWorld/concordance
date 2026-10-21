@@ -124,6 +124,8 @@ Sources : melenchon2027.fr/programme2025/livre, edouardphilippe.fr, republicains
 
 ```bash
 cp .env.example .env          # Postgres (Supabase), Ollama
+set -a; . ./.env; set +a
+PGSSLMODE=disable supabase db push --db-url "$DATABASE_URL"   # migrations (le pooler refuse TLS)
 uv sync
 uv run python -m concordance.ingest.an --legislatures 16 17
 uv run python -m concordance.pipeline.run --theme retraites
