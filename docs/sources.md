@@ -104,6 +104,11 @@ Vérifié le 2026-10-20. Tout ce qui n'a pas pu être confirmé sur la source es
 - Format déclaré expérimental par HowTheyVote, il peut changer.
 - Licence : ODbL 1.0 pour la base, DbCL 1.0 pour le contenu (https://howtheyvote.eu/data). Pas de fichier de licence dans le dépôt. Attribution obligatoire et **partage à l'identique** : toute base dérivée publiée doit être sous ODbL. Exceptions : photos et résumés de votes.
 
+- Page d'un vote : `https://howtheyvote.eu/votes/{id}` (vérifiée), avec liens vers le procès-verbal officiel des votes par appel nominal (`PV-10-...-RCV_FR.xml`) et la fiche de procédure de l'Observatoire législatif.
+- Constats à l'ingestion : résultat (`result`) vide pour 69 % des votes, laissé vide plutôt que déduit ; intitulés en anglais seulement (`display_title`), à traduire pour les fiches ; législatures déduites de `group_memberships` (9e depuis le 2019-07-02, 10e depuis le 2024-07-16).
+- Partis nationaux : `member_votes.national_party_id` donne le parti de l'eurodéputé au jour du vote ; libellés dans `national_parties` (dont « Sans parti » et « Indépendant », qui ne sont pas des partis). 40 délégations françaises sur les 9e et 10e législatures.
+- Attribution ODbL : chaque fiche qui affiche un vote du PE cite HowTheyVote.eu et sa licence.
+
 ### Portail open data du PE
 
 - API : https://data.europarl.europa.eu/api/v2/ (description OpenAPI). Exige l'en-tête `Accept: application/ld+json` (sinon 406). Licence de l'API : CC BY 4.0.

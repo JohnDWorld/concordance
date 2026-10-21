@@ -8,6 +8,7 @@ from pydantic import BaseModel
 Chamber = Literal["an", "senat", "pe"]
 Nature = Literal["texte_entier", "article", "amendement", "motion", "autre"]
 Position = Literal["pour", "contre", "abstention", "non_votant"]
+Category = Literal["groupe", "delegation_nationale"]
 
 
 class ParlGroup(BaseModel):
@@ -18,6 +19,7 @@ class ParlGroup(BaseModel):
     libelle: str
     start_date: date | None
     end_date: date | None
+    categorie: Category = "groupe"
 
 
 class GroupPosition(BaseModel):
