@@ -18,11 +18,24 @@ USER_AGENT = "Concordance (+https://github.com/JohnDWorld/concordance)"
 
 
 def fetch_into(url: str, part: Path) -> None:
-    """Complète `part` depuis l'octet déjà reçu (requête Range). Lève OSError si le fichier reste incomplet."""
-    done = part.stat().st_size if part.exists() else 0
-    headers = {"User-Agent": USER_AGENT} | ({"Range": f"bytes={done}-"} if done else {})
+    """Complète `part` depuis l'octet déjà reçu. Lève OSError si le fichier reste incomplet.
+
+    La reprise envoie If-Range avec l'ETag du premier essai : si le fichier a changé sur le serveur entre-temps,
+    celui-ci renvoie le fichier entier (200) et on repart de zéro, sans jamais mélanger deux versions.
+    """
+    etag_file = part.with_name(part.name + ".etag")
+    done = part.stat().st_size if part.exists() and etag_file.exists() else 0
+    headers = {"User-Agent": USER_AGENT}
+    if done:
+        headers |= {"Range": f"bytes={done}-", "If-Range": etag_file.read_text()}
     with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=120) as response:
         resumed = response.status == 206
+        if not resumed:
+            etag = response.headers.get("ETag")
+            if etag:
+                etag_file.write_text(etag)
+            else:
+                etag_file.unlink(missing_ok=True)  # sans ETag, aucune reprise possible en toute sûreté
         with part.open("ab" if resumed else "wb") as f:
             shutil.copyfileobj(response, f)
         expected = (response.headers.get("Content-Range") or "").rpartition("/")[2] if resumed else response.headers.get("Content-Length")
@@ -35,7 +48,6 @@ def download(url: str, dest: Path) -> Path:
     path = RAW / dest
     part = path.with_name(path.name + ".part")
     path.parent.mkdir(parents=True, exist_ok=True)
-    part.unlink(missing_ok=True)  # jamais de reprise d'un essai précédent : le fichier a pu changer depuis
     stalled = 0
     while True:
         before = part.stat().st_size if part.exists() else 0
@@ -53,6 +65,7 @@ def download(url: str, dest: Path) -> Path:
             print(f"{url} : {e}, reprise dans {delay} s", file=sys.stderr)
             time.sleep(delay)
     part.replace(path)
+    part.with_name(part.name + ".etag").unlink(missing_ok=True)
     with path.open("rb") as f:
         sha256 = hashlib.file_digest(f, "sha256").hexdigest()
     entry = {
