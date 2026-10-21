@@ -119,6 +119,7 @@ Sources : melenchon2027.fr/programme2025/livre, edouardphilippe.fr, republicains
 - Test contrefactuel : permuter les étiquettes anonymes ne change pas les verdicts
 - Répartition des verdicts par groupe publiée pour repérer un biais systématique
 - Une fiche de preuve HTML par candidat
+- Une fiche des amendements de la réforme 2023 à l'Assemblée : mêmes mesures pour chaque groupe, sans classement ni qualification d'intention
 
 ## Démarrage
 

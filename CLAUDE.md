@@ -69,7 +69,7 @@ Code dans `src/concordance/eval/`, données dans `eval/`.
 1. Initialiser le dépôt : arborescence du README, `pyproject.toml`, `.env.example`, `.gitignore`.
 2. Vérifier sur les sites officiels les URLs, formats et licences des jeux de données (Assemblée, Sénat, HowTheyVote). Consigner dans `docs/sources.md`. Me signaler tout ce qui diffère du README.
 3. Migrations du modèle de données (voir README).
-4. Ingestion des trois chambres, toutes nécessaires au prototype complet : Assemblée nationale d'abord (scrutins des 16e et 17e législatures, positions par groupe, organes), puis Sénat (scrutins, positions des groupes, comptes rendus), puis Parlement européen (votes nominaux, groupes). Périodes exactes à fixer après l'étape 2.
+4. Ingestion des trois chambres, toutes nécessaires au prototype complet, dans cet ordre : 4a Assemblée nationale (scrutins des 16e et 17e législatures, positions par groupe, organes) ; 4b Sénat depuis la session 2022-2023 (scrutins, positions des groupes, explications de vote) ; 4c amendements de la réforme des retraites 2023 à l'Assemblée, mesures factuelles par groupe (`docs/methodologie.md`) ; 4d Parlement européen, 9e et 10e législatures (votes nominaux, groupes) ; 4e explications de vote de l'Assemblée (comptes rendus).
 5. Saisie des mesures retraites de tous les candidats retenus par la règle d'inclusion (`docs/methodologie.md`), depuis leurs sources officielles (citation exacte + URL).
 6. Recherche hybride mesure ↔ scrutins (pgvector + plein texte français), revue manuelle des résultats avec moi.
 7. Anonymiseur + test de fuite, avant d'écrire le moindre prompt de juge.
@@ -81,6 +81,8 @@ Valide chaque étape avec moi avant de passer à la suivante. Commits petits et 
 ## À ne pas faire
 
 - Calculer un score global, un pourcentage de "tenue des promesses" ou un classement.
+- Qualifier l'intention d'un groupe ("obstruction", "travail sérieux"...) : on mesure des faits, le lecteur juge.
+- Afficher un logo ou une couleur de parti : badge identique pour tous (sigle + nom complet).
 - Résumer une explication de vote à la place de la citer.
 - Ajouter du tracking ou de l'analytics au site publié.
 - Élargir à d'autres thèmes avant que le prototype retraites passe l'évaluation.
