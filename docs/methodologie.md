@@ -26,9 +26,19 @@ Le garde-fou principal contre le biais est le test contrefactuel : on permute le
 ## Données de vote
 
 - **Chiffres rapportés tels quels** : pour, contre, abstention, non-votants et, à l'Assemblée, non-votants volontaires, sans regroupement ni interprétation.
-- **Position majoritaire** : reprise de la source, sauf quand le groupe n'a exprimé aucun vote (ni pour, ni contre, ni abstention). Elle reste alors vide. Exemple : sur une motion de censure, seuls les votes « pour » sont décomptés ; un groupe qui ne la vote pas n'est ni « pour » ni « contre ».
-- **Nature du scrutin** (Assemblée) : déduite du début de l'intitulé, par une règle unique pour tous. Motion de censure ou intitulé commençant par « la motion » : `motion`. « l'amendement », « le sous-amendement », « les amendements » : `amendement`. « l'article » : `article`. « l'ensemble » : `texte_entier`. Sinon, nature non renseignée plutôt que devinée.
+- **Position majoritaire** : reprise de la source, sauf quand le groupe n'a exprimé aucun vote (ni pour, ni contre, ni abstention). Elle reste alors vide. Exemple : sur une motion de censure, seuls les votes « pour » sont décomptés ; un groupe qui ne la vote pas n'est ni « pour » ni « contre ». Quand la source ne la donne pas (Sénat, Parlement européen), elle est calculée : la position qui a le plus de voix entre pour, contre et abstention, vide en cas d'égalité en tête ou sans vote exprimé.
+- **Groupes du Sénat** : libellé actuel de l'export officiel des sénateurs. Un changement de nom en cours de période (« Union Centriste » devenu « Union Centriste et Indépendants ») n'est pas historisé ; le code du groupe, lui, ne change pas.
+- **Nature du scrutin** (Assemblée et Sénat, dont l'intitulé commence par « sur ») : déduite du début de l'intitulé, par une règle unique pour tous. Motion de censure ou intitulé commençant par « la motion » : `motion`. « l'amendement », « le sous-amendement », « les amendements » : `amendement`. « l'article » : `article`. « l'ensemble » : `texte_entier`. Sinon, nature non renseignée plutôt que devinée.
 - **Congrès** : les scrutins du Parlement réuni en Congrès ne sont pas rattachés à l'Assemblée seule.
+
+## Explications de vote
+
+- Source : le compte rendu **intégral** (mot à mot), jamais un compte rendu analytique ou résumé.
+- **Sénat** : une explication de vote est l'intervention d'un sénateur à qui la présidence donne la parole « pour explication de vote » ou « pour le groupe ... ». Elle réunit tous ses tours de parole jusqu'à ce que la présidence reprenne la parole. Les interruptions d'autres orateurs en sont exclues et remplacées par « […] ». L'orateur doit porter le nom annoncé par la présidence.
+- L'explication est rattachée au premier scrutin public annoncé ensuite. Si un vote à main levée intervient avant, elle n'est rattachée à aucun scrutin : elle concerne un vote sans décompte par groupe.
+- Le groupe de l'orateur est son appartenance officielle à la date de la séance, pas le groupe cité oralement.
+- Le texte est copié tel quel, y compris les indications de séance entre parenthèses (« Applaudissements sur les travées du groupe... »).
+- Plusieurs orateurs d'un même groupe peuvent s'exprimer : toutes leurs explications sont conservées.
 
 ## Explication de vote absente
 

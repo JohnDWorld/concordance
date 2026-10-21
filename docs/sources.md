@@ -62,10 +62,13 @@ Vérifié le 2026-10-20. Tout ce qui n'a pas pu être confirmé sur la source es
 - Exemples lus : scrutin 249 du 2023-03-11 (articles 9 à 20 et ensemble du PLFRSS 2023) https://www.senat.fr/scrutin-public/2022/scr2022-249.html, scrutin 251 du 2023-03-16 (texte de la CMP) https://www.senat.fr/scrutin-public/2022/scr2022-251.html. Scrutins 240 à 248 : articles et amendements du même texte.
 - Fréquence de mise à jour : `TODO: vérifier`.
 - Décision : les pages de scrutin sont récupérées et analysées. Une copie brute de chaque page est conservée dans `data/raw/` avec sa date et son URL.
+- Gabarit vérifié identique d'octobre 2022 à octobre 2026 : titre `h1.page-title` (« Scrutin n°251 - séance du 16 mars 2023 »), intitulé `p.page-lead`, résultat (« Le Sénat a adopté / n'a pas adopté »), totaux, puis un bloc par groupe dont l'identifiant HTML porte le code du groupe (`accordion-scrutin-UMP`), le même que `grppolcod` dans l'export des sénateurs. Jointure par code, jamais par libellé.
+- Contrôle à chaque page : la somme des « pour » et des « contre » des groupes doit égaler les totaux de la page, sinon la page n'est pas chargée et elle est signalée.
+- `robots.txt` de senat.fr : `/scrutin-public/` et `/cra/` non interdits. Une page par seconde.
 
 ### Sénateurs et groupes
 
-- Page : https://data.senat.fr/les-senateurs/ ; export complet https://data.senat.fr/data/senateurs/export_sens.zip (8,5 Mo).
+- Page : https://data.senat.fr/les-senateurs/ ; export complet https://data.senat.fr/data/senateurs/export_sens.zip (8,5 Mo, un dump PostgreSQL `export_sens.sql` en UTF-8, 95 tables). Table des groupes : `grppol` (`grppolcod` code, `grppolliccou` sigle, `grppollibcou` libellé, `grppoldatcre`, `grppoldatfin` ; 1899-12-31 = date inconnue). Appartenances : `memgrppol` (`senmat`, `grppolcod`, `memgrppoldatdeb`, `memgrppoldatfin`).
 - https://data.senat.fr/data/senateurs/ODSEN_HISTOGROUPES.csv : `Matricule`, `Id appartenance`, `Nom`, `Code du groupe politique`, `Nom court du groupe politique`, `Date de début d'appartenance`, `Date de fin d'appartenance`, `Nom court fonction`. Plusieurs lignes par sénateur (une par période et par fonction) : filtrer par date. `ODSEN_GENERAL.csv` : `Matricule`, `Groupe politique`, etc.
 - Format : ISO-8859-1, CRLF, virgule, lignes `%` avant l'en-tête.
 - Codes de groupe anciens (`UMP` pour le groupe Les Républicains) et libellés variables (« Union Centriste » en 2023, « Union Centriste et Indépendants » en 2026).
@@ -78,10 +81,12 @@ Vérifié le 2026-10-20. Tout ce qui n'a pas pu être confirmé sur la source es
 - XML : namespace `http://senat.fr/schemas/thb/cri`, ISO-8859-1, **mal formé** (un parseur XML strict échoue, il faut un parseur tolérant). Intervenants : `cri:intervenant` avec `mat`, `nom`, `parid`, sans groupe.
 - Explications de vote : `<divers type="2" libelle="Explications de vote sur l'ensemble">`. Le numéro de scrutin figure dans `cri:tm6` (« Adoption, par scrutin public n° 249 ») et les totaux dans `cri:scrutin1` / `cri:scrutin2` (identiques à ceux des pages de scrutin).
 - Groupe de l'orateur : jointure `mat` (XML) = `Matricule` (ODSEN) vérifiée sur 4 orateurs.
-- Version HTML : `https://www.senat.fr/cra/s{AAAAMMJJ}/s{AAAAMMJJ}_som.html` (sommaire), `_0.html` à `_7.html`, `_mono.html` (séance entière). Chaque paragraphe a une ancre `#par_{n}`.
-- **Le texte diffère entre le XML et le HTML** (formulations, apostrophes), et les identifiants `parid` du XML ne correspondent pas aux ancres HTML. Conséquence : les citations viennent du HTML public (ancré). Le XML sert à la structure (orateur, section, scrutin) et l'appariement avec le HTML se fait par orateur et par texte.
-- Exemple vérifié (HTML) : « La CMP a marqué une étape importante, après un examen tronqué à l'Assemblée nationale. », https://www.senat.fr/cra/s20230316/s20230316_0.html#par_463.
-- `TODO: vérifier` : sens des attributs `type`, `analyse`, `checked` ; numéro 251 absent du HTML du 16 mars ; rythme de mise à jour (non documenté).
+- **Deux comptes rendus à ne pas confondre** (corrigé le 2026-10-21) :
+  - `https://www.senat.fr/cra/s{AAAAMMJJ}/s{AAAAMMJJ}_mono.html` : compte rendu **analytique** (titre de page « Comptes rendus analytiques officiel »), qui **résume** les interventions. Inutilisable pour citer. L'extrait noté ici à l'étape 2 venait de cette version : ce n'étaient pas les mots exacts de l'oratrice.
+  - `https://www.senat.fr/seances/s{AAAAMM}/s{AAAAMMJJ}/s{AAAAMMJJ}_mono.html` : compte rendu **intégral**, mot à mot, même texte que `cri.zip`. Source retenue pour les citations. Publié avec quelques semaines de délai.
+- Compte rendu intégral HTML : chaque tour de parole est un bloc `div.intervenant` portant un commentaire `<!--cri:intervenant mat="10006L" nom="Catherine DEROCHE" qua="" ...-->`, donc le matricule du sénateur ; la présidence porte `qua="président de séance"`. Chaque paragraphe a une ancre `#par_{n}`. Aucun titre « Explications de vote » : la présidence annonce « La parole est à ..., pour explication de vote » ou « ..., pour le groupe ... ». Règle d'extraction dans `methodologie.md`.
+- Exemple vérifié (intégral) : « Monsieur le président, messieurs les ministres, mes chers collègues, la CMP qui s’est tenue hier a marqué une étape importante », Mme Catherine Deroche, groupe Les Républicains, https://www.senat.fr/seances/s202303/s20230316/s20230316_mono.html#par_2917.
+- `TODO: vérifier` : rythme de mise à jour (non documenté).
 
 ### Dossiers législatifs et amendements
 

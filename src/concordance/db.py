@@ -4,6 +4,8 @@ from typing import Any
 import psycopg
 from psycopg import sql
 
+from concordance.models import Ballot, Chamber, ParlGroup, VoteExplanation
+
 
 def connect() -> psycopg.Connection[Any]:
     return psycopg.connect(os.environ["DATABASE_URL"])
@@ -22,3 +24,55 @@ def upsert(cur: psycopg.Cursor[Any], table: str, rows: list[dict[str, Any]], con
         u=sql.SQL(", ").join(sql.SQL("{0} = excluded.{0}").format(sql.Identifier(c)) for c in cols if c not in conflict),
     )
     cur.executemany(query, rows)
+
+
+def load_votes(conn: psycopg.Connection[Any], chamber: Chamber, groups: list[ParlGroup], ballots: list[Ballot]) -> None:
+    """Charge groupes, scrutins et positions d'une chambre. Un groupe inconnu fait échouer le chargement."""
+    with conn.cursor() as cur:
+        upsert(cur, "parl_groups", [g.model_dump() for g in groups], ("chamber", "legislature", "external_id"))
+        upsert(cur, "ballots", [b.model_dump(exclude={"positions"}) for b in ballots], ("chamber", "external_id"))
+        cur.execute("select legislature, external_id, id from concordance.parl_groups where chamber = %s", (chamber,))
+        group_ids = {(leg, ext): id_ for leg, ext, id_ in cur}
+        cur.execute("select external_id, id from concordance.ballots where chamber = %s", (chamber,))
+        ballot_ids = dict(cur.fetchall())
+        rows = [
+            {
+                **p.model_dump(exclude={"group_external_id"}),
+                "ballot_id": ballot_ids[b.external_id],
+                "group_id": group_ids[(b.legislature, p.group_external_id)],
+            }
+            for b in ballots
+            for p in b.positions
+        ]
+        upsert(cur, "group_positions", rows, ("ballot_id", "group_id"))
+
+
+def load_explanations(conn: psycopg.Connection[Any], chamber: Chamber, explanations: list[VoteExplanation]) -> int:
+    """Remplace les explications de la chambre par celles reliées à un scrutin existant du même jour.
+
+    Elles sont entièrement recalculées depuis les sources à chaque passage : rien de manuel n'est perdu.
+    Renvoie le nombre d'explications écartées.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            "delete from concordance.vote_explanations where ballot_id in (select id from concordance.ballots where chamber = %s)",
+            (chamber,),
+        )
+        cur.execute("select external_id, id, ballot_date from concordance.ballots where chamber = %s", (chamber,))
+        ballots = {ext: (id_, day) for ext, id_, day in cur}
+        cur.execute("select legislature, external_id, id from concordance.parl_groups where chamber = %s", (chamber,))
+        group_ids = {ext: id_ for _, ext, id_ in cur}  # ponytail: suppose un code unique par chambre (vrai au Sénat)
+        rows = [
+            {
+                "ballot_id": ballots[e.ballot_external_id][0],
+                "group_id": group_ids[e.group_external_id],
+                "orateur": e.orateur,
+                "orateur_external_id": e.orateur_external_id,
+                "texte": e.texte,
+                "source_url": e.source_url,
+            }
+            for e in explanations
+            if ballots.get(e.ballot_external_id, (None, None))[1] == e.ballot_date
+        ]
+        upsert(cur, "vote_explanations", rows, ("ballot_id", "group_id", "source_url"))
+    return len(explanations) - len(rows)
