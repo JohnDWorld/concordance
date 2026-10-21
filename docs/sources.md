@@ -106,6 +106,7 @@ Vérifié le 2026-10-20. Tout ce qui n'a pas pu être confirmé sur la source es
 - Notice légale (https://www.europarl.europa.eu/legal-notice/en/) : réutilisation autorisée, avec la mention « © European Union, [année] - Source: European Parliament ». Une reproduction partielle doit citer l'URL de l'élément complet.
 - Explications de vote : les comptes rendus in extenso (pages `doceo`, par exemple `CRE-10-2025-06-18-ITM-017`) contiennent une section « explications de vote orales », vue seulement dans des résultats de recherche. Les pages `doceo` renvoient 202 avec un corps vide aux clients automatisés (protection anti-robot).
 - `TODO: vérifier` : contenu réel d'un CRE de la 10e législature, publication des explications écrites (fiches des députés ?), et si une explication est individuelle (par député) ou de groupe, ce qui change le contrat du juge.
+- Décision (2026-10-20) : pour le prototype, les explications de vote du PE ne sont pas ingérées. Seuls les votes (HowTheyVote) le sont, et les fiches indiquent « explication non disponible ».
 
 ## Programmes et candidatures
 
