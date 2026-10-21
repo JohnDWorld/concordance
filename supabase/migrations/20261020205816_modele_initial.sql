@@ -1,5 +1,5 @@
 -- Modèle de données initial (README.md, section « Modèle de données »).
--- Instance Supabase partagée : tout vit dans le schéma concordance.
+-- Base dédiée (docker-compose.yml) : tout vit dans le schéma concordance.
 -- Pas de suppression en cascade : rien n'est supprimé sans le vouloir (docs/methodologie.md).
 -- Embeddings et plein texte : migration de l'étape 6, une fois le modèle et sa dimension choisis.
 

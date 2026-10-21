@@ -41,7 +41,7 @@ Les programmes disent une chose, les réseaux sociaux en disent une autre. Les v
  Sources officielles            Stockage                 Traitement local (RTX 4090)
  ─────────────────────          ─────────────            ───────────────────────────
  Assemblée nationale  ─┐                                  
- Sénat                 ├─ n8n ─▶ Supabase / Postgres ─▶ 1. Mesures atomiques
+ Sénat                 ├─ n8n ─▶ Postgres dédiée     ─▶ 1. Mesures atomiques
  Parlement européen   ─┤  cron   + pgvector             2. Embeddings (Ollama)
  Programmes           ─┘                                 3. Recherche hybride mesure ↔ scrutins
                                                          4. Anonymisation + test de fuite
@@ -56,7 +56,7 @@ Les programmes disent une chose, les réseaux sociaux en disent une autre. Les v
 
 - **Orchestration** : n8n auto-hébergé (crons d'ingestion, enchaînement des étapes)
 - **Traitements** : Python 3.12, géré avec `uv`
-- **Base** : Supabase auto-hébergé (Postgres + pgvector + recherche plein texte en français), tables dans un schéma dédié `concordance`
+- **Base** : Postgres 17 + pgvector dans un conteneur dédié (`docker-compose.yml`), recherche plein texte en français, migrations gérées avec le CLI Supabase. Jamais partagée avec un autre projet
 - **IA locale** : Ollama
   - embeddings multilingues (ex. `bge-m3`)
   - deux juges de familles différentes, dimensionnés pour 24 Go de VRAM (ex. un Qwen et un Mistral quantifiés), choix final après évaluation
@@ -123,16 +123,17 @@ Sources : melenchon2027.fr/programme2025/livre, edouardphilippe.fr, republicains
 ## Démarrage
 
 ```bash
-cp .env.example .env          # Postgres (Supabase), Ollama
+cp .env.example .env          # mot de passe Postgres, DATABASE_URL, Ollama
+docker compose up -d          # base Postgres + pgvector dédiée
 set -a; . ./.env; set +a
-PGSSLMODE=disable supabase db push --db-url "$DATABASE_URL"   # migrations (le pooler refuse TLS)
+PGSSLMODE=disable supabase db push --db-url "$DATABASE_URL"   # migrations (CLI Supabase)
 uv sync
 uv run python -m concordance.ingest.an --legislatures 16 17
 uv run python -m concordance.pipeline.run --theme retraites
 uv run python -m concordance.eval.run --gold eval/gold_retraites.csv
 ```
 
-*(Commandes cibles, à créer lors de la première session.)* n8n et Supabase tournent déjà sur un serveur auto-hébergé : pas de `docker-compose.yml` dans ce dépôt.
+*(Commandes cibles, à créer lors de la première session.)* n8n tourne sur un serveur auto-hébergé. La base est dédiée à Concordance : projet public, une fuite ne doit exposer que ses propres données.
 
 ## Arborescence prévue
 
@@ -141,6 +142,7 @@ concordance/
 ├── README.md
 ├── CLAUDE.md
 ├── .env.example
+├── docker-compose.yml
 ├── pyproject.toml
 ├── supabase/migrations/
 ├── src/concordance/
