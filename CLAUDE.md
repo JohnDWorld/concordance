@@ -60,7 +60,7 @@ Code dans `src/concordance/eval/`, données dans `eval/`.
 - Python 3.12 avec `uv`, typage strict, Pydantic pour tous les schémas, `pytest`.
 - Base : Postgres 17 + pgvector dans un conteneur dédié (`docker-compose.yml`), jamais partagée avec un autre projet (projet public : une fuite ne doit exposer que Concordance). Schéma uniquement via migrations dans `supabase/migrations/` (CLI Supabase), jamais de modification à la main. Tables dans le schéma `concordance`.
 - Ollama en local (RTX 4090, 24 Go) : embeddings multilingues, deux juges choisis après benchmark sur le jeu de référence. Aucun appel à une API d'IA externe dans le pipeline.
-- n8n orchestre (crons, enchaînements) et appelle les scripts Python. La logique métier reste en Python, testable hors n8n. Workflows exportés en JSON dans `n8n/workflows/`.
+- Pas de n8n (instance partagée avec d'autres projets) : des timers systemd lancent les scripts Python sous un utilisateur dédié, sans accès aux autres projets. Unités versionnées dans `deploy/systemd/`. Toute la logique reste en Python, testable seule.
 - Secrets dans `.env` uniquement, `.env.example` tenu à jour.
 - Données brutes téléchargées dans `data/raw/` (ignoré par git), avec date et URL d'origine consignées.
 
