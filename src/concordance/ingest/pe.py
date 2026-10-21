@@ -16,7 +16,8 @@ from concordance.rules import majority
 
 RELEASES = "https://github.com/HowTheyVote/data/releases"
 LATEST = "https://api.github.com/repos/HowTheyVote/data/releases/latest"
-FILES = ("votes", "member_votes", "groups", "group_memberships")
+FILES = ("votes", "member_votes", "groups", "group_memberships", "national_parties")
+COUNTRY = "FRA"  # délégations nationales suivies : celles des partis français
 POSITIONS = {"FOR": "pour", "AGAINST": "contre", "ABSTENTION": "abstention", "DID_NOT_VOTE": "non_votants"}
 Row = dict[str, str]
 
@@ -72,18 +73,52 @@ def parse_groups(groups: Iterable[Row], memberships: Iterable[Row]) -> list[Parl
     ]
 
 
-def parse_ballots(votes: Iterable[Row], member_votes: Iterable[Row], starts: dict[int, date]) -> tuple[list[Ballot], int]:
-    """Votes et positions agrégées par groupe. Renvoie aussi le nombre de votes individuels sans groupe."""
+def delegation_id(party_id: str) -> str:
+    return f"{COUNTRY}-{party_id}"
+
+
+def parse_ballots(
+    votes: Iterable[Row], member_votes: Iterable[Row], parties: Iterable[Row], starts: dict[int, date]
+) -> tuple[list[Ballot], list[ParlGroup], int]:
+    """Votes, positions par groupe et par délégation nationale française, et nombre de votes individuels sans groupe.
+
+    Une délégation existe pour une législature dès qu'un eurodéputé du parti y vote ; sa période va de son
+    premier à son dernier vote.
+    """
+    votes = list(votes)  # parcourus deux fois
+    days = {v["id"]: datetime.fromisoformat(v["timestamp"]).date() for v in votes}
     counts: dict[str, dict[str, Counter[str]]] = defaultdict(lambda: defaultdict(Counter))
+    seen: dict[tuple[int, str], tuple[date, date]] = {}
     without_group = 0
     for r in member_votes:
-        if not r["group_code"]:
+        position = POSITIONS[r["position"]]
+        if r["group_code"]:
+            counts[r["vote_id"]][r["group_code"]][position] += 1
+        else:
             without_group += 1
-            continue
-        counts[r["vote_id"]][r["group_code"]][POSITIONS[r["position"]]] += 1
+        if r["country_code"] == COUNTRY and r["national_party_id"]:
+            counts[r["vote_id"]][delegation_id(r["national_party_id"])][position] += 1
+            when = days[r["vote_id"]]
+            key = (term_of(when, starts), r["national_party_id"])
+            first, last = seen.get(key, (when, when))
+            seen[key] = (min(first, when), max(last, when))
+    labels = {p["id"]: p for p in parties}
+    delegations = [
+        ParlGroup(
+            chamber="pe",
+            legislature=term,
+            external_id=delegation_id(party),
+            sigle=labels[party]["short_label"],
+            libelle=labels[party]["label"],
+            start_date=first,
+            end_date=last,
+            categorie="delegation_nationale",
+        )
+        for (term, party), (first, last) in seen.items()
+    ]
     ballots = []
     for v in votes:
-        when = datetime.fromisoformat(v["timestamp"]).date()
+        when = days[v["id"]]
         positions = [
             GroupPosition(
                 group_external_id=group,
@@ -111,7 +146,7 @@ def parse_ballots(votes: Iterable[Row], member_votes: Iterable[Row], starts: dic
             source_url=f"https://howtheyvote.eu/votes/{v['id']}",
             positions=positions,
         ))
-    return ballots, without_group
+    return ballots, delegations, without_group
 
 
 def main() -> None:
@@ -119,10 +154,12 @@ def main() -> None:
     paths = {name: download(f"{RELEASES}/download/{tag}/{name}.csv.gz", Path(f"pe/{tag}/{name}.csv.gz")) for name in FILES}
     starts = term_starts(rows(paths["group_memberships"]))
     groups = parse_groups(rows(paths["groups"]), rows(paths["group_memberships"]))
-    ballots, without_group = parse_ballots(rows(paths["votes"]), rows(paths["member_votes"]), starts)
+    ballots, delegations, without_group = parse_ballots(
+        rows(paths["votes"]), rows(paths["member_votes"]), rows(paths["national_parties"]), starts)
     with db.connect() as conn:
-        db.load_votes(conn, "pe", groups, ballots)
-    print(f"PE ({tag}) : {len(groups)} groupes, {len(ballots)} votes, {sum(len(b.positions) for b in ballots)} positions")
+        db.load_votes(conn, "pe", groups + delegations, ballots)
+    print(f"PE ({tag}) : {len(groups)} groupes, {len(delegations)} délégations françaises, {len(ballots)} votes, "
+          f"{sum(len(b.positions) for b in ballots)} positions")
     print(f"Législatures : {', '.join(f'{t} depuis le {d}' for t, d in sorted(starts.items()))} ; votes individuels sans groupe : {without_group}")
 
 
