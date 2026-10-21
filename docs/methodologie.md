@@ -23,6 +23,13 @@ L'anonymiseur est accepté si son taux ne dépasse pas la référence au-delà d
 
 Le garde-fou principal contre le biais est le test contrefactuel : on permute les étiquettes `Groupe A`, `Groupe B`... et le verdict ne doit pas changer.
 
+## Données de vote
+
+- **Chiffres rapportés tels quels** : pour, contre, abstention, non-votants et, à l'Assemblée, non-votants volontaires, sans regroupement ni interprétation.
+- **Position majoritaire** : reprise de la source, sauf quand le groupe n'a exprimé aucun vote (ni pour, ni contre, ni abstention). Elle reste alors vide. Exemple : sur une motion de censure, seuls les votes « pour » sont décomptés ; un groupe qui ne la vote pas n'est ni « pour » ni « contre ».
+- **Nature du scrutin** (Assemblée) : déduite du début de l'intitulé, par une règle unique pour tous. Motion de censure ou intitulé commençant par « la motion » : `motion`. « l'amendement », « le sous-amendement », « les amendements » : `amendement`. « l'article » : `article`. « l'ensemble » : `texte_entier`. Sinon, nature non renseignée plutôt que devinée.
+- **Congrès** : les scrutins du Parlement réuni en Congrès ne sont pas rattachés à l'Assemblée seule.
+
 ## Explication de vote absente
 
 Quand aucune explication de vote n'est disponible pour un groupe (pas d'intervention, source non exploitable), la fiche l'indique : « explication non disponible ». Elle n'est jamais remplacée par un résumé, une déduction ou un autre texte.
