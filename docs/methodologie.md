@@ -31,6 +31,15 @@ Le garde-fou principal contre le biais est le test contrefactuel : on permute le
 - **Nature du scrutin** (Assemblée et Sénat, dont l'intitulé commence par « sur ») : déduite du début de l'intitulé, par une règle unique pour tous. Motion de censure ou intitulé commençant par « la motion » : `motion`. « l'amendement », « le sous-amendement », « les amendements » : `amendement`. « l'article » : `article`. « l'ensemble » : `texte_entier`. Sinon, nature non renseignée plutôt que devinée.
 - **Congrès** : les scrutins du Parlement réuni en Congrès ne sont pas rattachés à l'Assemblée seule.
 
+## Explications de vote
+
+- Source : le compte rendu **intégral** (mot à mot), jamais un compte rendu analytique ou résumé.
+- **Sénat** : une explication de vote est l'intervention d'un sénateur à qui la présidence donne la parole « pour explication de vote » ou « pour le groupe ... ». Elle réunit tous ses tours de parole jusqu'à ce que la présidence reprenne la parole. Les interruptions d'autres orateurs en sont exclues et remplacées par « […] ». L'orateur doit porter le nom annoncé par la présidence.
+- L'explication est rattachée au premier scrutin public annoncé ensuite. Si un vote à main levée intervient avant, elle n'est rattachée à aucun scrutin : elle concerne un vote sans décompte par groupe.
+- Le groupe de l'orateur est son appartenance officielle à la date de la séance, pas le groupe cité oralement.
+- Le texte est copié tel quel, y compris les indications de séance entre parenthèses (« Applaudissements sur les travées du groupe... »).
+- Plusieurs orateurs d'un même groupe peuvent s'exprimer : toutes leurs explications sont conservées.
+
 ## Explication de vote absente
 
 Quand aucune explication de vote n'est disponible pour un groupe (pas d'intervention, source non exploitable), la fiche l'indique : « explication non disponible ». Elle n'est jamais remplacée par un résumé, une déduction ou un autre texte.
