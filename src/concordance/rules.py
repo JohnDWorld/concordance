@@ -2,6 +2,7 @@
 
 import re
 import unicodedata
+from datetime import date
 
 from concordance.models import Nature, Position
 
@@ -18,6 +19,17 @@ def nature(intitule: str, code_type_vote: str = "") -> Nature | None:
     if t.startswith("l'ensemble"):
         return "texte_entier"
     return None
+
+
+Membership = tuple[str, date | None, date | None]  # (groupe, début, fin)
+
+
+def group_at(periods: list[Membership], when: date | None) -> str | None:
+    """Groupe d'un parlementaire à une date (appartenance officielle). None si inconnu ou ambigu."""
+    if when is None:
+        return None
+    codes = {g for g, start, end in periods if (start is None or start <= when) and (end is None or when <= end)}
+    return codes.pop() if len(codes) == 1 else None
 
 
 def majority(pour: int, contre: int, abstention: int) -> Position | None:

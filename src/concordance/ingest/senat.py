@@ -16,7 +16,7 @@ from typing import Any
 from concordance import db
 from concordance.ingest.raw import RAW, download
 from concordance.models import Ballot, GroupPosition, ParlGroup, VoteExplanation
-from concordance.rules import majority, nature
+from concordance.rules import Membership, group_at, majority, nature
 
 EXPORT = "https://data.senat.fr/data/senateurs/export_sens.zip"
 SITE = "https://www.senat.fr"
@@ -131,7 +131,6 @@ def parse_ballot(page: str, session: int, number: int) -> Ballot:
     )
 
 
-Membership = tuple[str, date | None, date | None]
 BLOCK_START = re.compile(r'<div id="intv_par_\d+" class="intervenant">')
 BLOCK_END = "<!--/cri:intervenant -->"  # absent des interruptions collectives
 SPEAKER = re.compile(r'<!--cri:intervenant mat="([^"]*)" nom="([^"]*)" qua="([^"]*)"')
@@ -148,11 +147,6 @@ def memberships(dump: str) -> dict[str, list[Membership]]:
     for r in copy_rows(dump, "memgrppol"):
         out.setdefault(r["senmat"], []).append((r["grppolcod"], day(r["memgrppoldatdeb"]), day(r["memgrppoldatfin"])))
     return out
-
-
-def group_at(periods: list[Membership], when: date) -> str | None:
-    codes = {code for code, start, end in periods if (start is None or start <= when) and (end is None or when <= end)}
-    return codes.pop() if len(codes) == 1 else None
 
 
 def fold(text: str) -> str:

@@ -2,7 +2,8 @@ from datetime import date
 
 import pytest
 
-from concordance.ingest.senat import Membership, copy_rows, current_session, parse_ballot, parse_explanations
+from concordance.ingest.senat import copy_rows, current_session, parse_ballot, parse_explanations
+from concordance.rules import Membership
 
 # Gabarit réel d'une page de scrutin (senat.fr), réduit à deux groupes.
 GROUP = """<div id="accordion-scrutin-{code}" class="accordion-header"><div role="button" data-bs-target="#accordion-collapse-scrutin-{code}">

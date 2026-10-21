@@ -31,6 +31,34 @@ class GroupPosition(BaseModel):
     position_majoritaire: Position | None
 
 
+class Amendment(BaseModel):
+    chamber: Chamber
+    legislature: int | None
+    external_id: str
+    dossier_ref: str
+    texte_ref: str
+    numero: str
+    organe_examen: str
+    auteur_type: str
+    auteur_ref: str | None
+    group_external_id: str | None
+    date_depot: date | None
+    etat: str | None
+    sous_etat: str | None
+    sort: str | None
+    division: str | None
+    dispositif: str | None
+    expose_sommaire: str | None
+    cosignataires: list[str]  # identifiants des cosignataires
+    source_url: str
+    # Mesures : calculées une fois tous les amendements du texte connus.
+    identique: bool = False
+    serie: bool = False
+    suppression: bool | None = None
+    forme: bool | None = None
+    mots_ajoutes: int | None = None
+
+
 class VoteExplanation(BaseModel):
     ballot_external_id: str
     ballot_date: date  # contrôle : le scrutin relié doit dater du jour de la séance
