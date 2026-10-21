@@ -7,7 +7,10 @@ authors = [
 ]
 requires-python = ">=3.12"
 license = "AGPL-3.0-only"
-dependencies = []
+dependencies = [
+    "psycopg[binary]>=3.3.6",
+    "pydantic>=2.14.1",
+]
 
 [build-system]
 requires = ["uv_build>=0.13.4,<0.14.0"]
