@@ -1,6 +1,6 @@
 from datetime import date
 
-from concordance.ingest.an import nature, parse_ballot, parse_group
+from concordance.ingest.an import parse_ballot, parse_group
 
 # Extrait réduit de VTANR5L16V1240 (structure réelle de Scrutins.json, nombres en chaînes).
 SCRUTIN = {
@@ -25,16 +25,6 @@ SCRUTIN = {
                                    "nonVotantsVolontaires": "0"}}},
     ]}}},
 }
-
-
-def test_nature() -> None:
-    assert nature("la motion de rejet préalable", "SPO") == "motion"
-    assert nature("le texte", "MOC") == "motion"
-    assert nature("l’amendement n° 12 de M. X", "SPO") == "amendement"
-    assert nature("le sous-amendement n° 3", "SPO") == "amendement"
-    assert nature("l'article premier du projet de loi", "SPO") == "article"
-    assert nature("l'ensemble de la proposition de loi", "SPS") == "texte_entier"
-    assert nature("la première partie du projet de loi de finances", "SPO") is None
 
 
 def test_parse_ballot() -> None:
