@@ -4,7 +4,7 @@ from typing import Any
 import psycopg
 from psycopg import sql
 
-from concordance.models import Ballot, Chamber, ParlGroup
+from concordance.models import Ballot, Chamber, ParlGroup, VoteExplanation
 
 
 def connect() -> psycopg.Connection[Any]:
@@ -45,3 +45,34 @@ def load_votes(conn: psycopg.Connection[Any], chamber: Chamber, groups: list[Par
             for p in b.positions
         ]
         upsert(cur, "group_positions", rows, ("ballot_id", "group_id"))
+
+
+def load_explanations(conn: psycopg.Connection[Any], chamber: Chamber, explanations: list[VoteExplanation]) -> int:
+    """Remplace les explications de la chambre par celles reliées à un scrutin existant du même jour.
+
+    Elles sont entièrement recalculées depuis les sources à chaque passage : rien de manuel n'est perdu.
+    Renvoie le nombre d'explications écartées.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            "delete from concordance.vote_explanations where ballot_id in (select id from concordance.ballots where chamber = %s)",
+            (chamber,),
+        )
+        cur.execute("select external_id, id, ballot_date from concordance.ballots where chamber = %s", (chamber,))
+        ballots = {ext: (id_, day) for ext, id_, day in cur}
+        cur.execute("select legislature, external_id, id from concordance.parl_groups where chamber = %s", (chamber,))
+        group_ids = {ext: id_ for _, ext, id_ in cur}  # ponytail: suppose un code unique par chambre (vrai au Sénat)
+        rows = [
+            {
+                "ballot_id": ballots[e.ballot_external_id][0],
+                "group_id": group_ids[e.group_external_id],
+                "orateur": e.orateur,
+                "orateur_external_id": e.orateur_external_id,
+                "texte": e.texte,
+                "source_url": e.source_url,
+            }
+            for e in explanations
+            if ballots.get(e.ballot_external_id, (None, None))[1] == e.ballot_date
+        ]
+        upsert(cur, "vote_explanations", rows, ("ballot_id", "group_id", "source_url"))
+    return len(explanations) - len(rows)

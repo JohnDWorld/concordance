@@ -31,6 +31,16 @@ class GroupPosition(BaseModel):
     position_majoritaire: Position | None
 
 
+class VoteExplanation(BaseModel):
+    ballot_external_id: str
+    ballot_date: date  # contrôle : le scrutin relié doit dater du jour de la séance
+    group_external_id: str
+    orateur: str
+    orateur_external_id: str | None
+    texte: str
+    source_url: str
+
+
 class Ballot(BaseModel):
     chamber: Chamber
     legislature: int | None
