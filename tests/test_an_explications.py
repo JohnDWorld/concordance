@@ -1,6 +1,6 @@
 from datetime import date
 
-from concordance.ingest.an_explications import match_ballot, parse_explanations
+from concordance.ingest.an_explications import match_ballot, parse_debates, parse_explanations
 
 
 def para(order: int, anchor: str, acteur: str, nom: str, text: str, grammar: str = "PAROLE_GENERIQUE") -> str:
@@ -49,3 +49,12 @@ def test_match_ballot() -> None:
     assert match_ballot("Voici le résultat du scrutin : Pour l’adoption 50 Contre 3", candidates) is None
     assert match_ballot("Majorité requise ... : 289 Pour l’adoption : 94 La majorité requise", candidates) == "V1241"
     assert match_ballot("Pour l’approbation 278 Contre 0 L’Assemblée nationale a approuvé", candidates) == "V1240"
+
+
+def test_parse_debates() -> None:
+    debates = parse_debates(REPORT, BALLOTS)
+    assert set(debates) == {"V1", "V2"}
+    day, text = debates["V2"]
+    assert day == date(2023, 3, 20)
+    assert "Nous voterons ce texte." in text  # débat court : il remonte avant le résultat précédent
+    assert text.endswith("(L’amendement n’est pas adopté.)") and "Voici le résultat" not in text

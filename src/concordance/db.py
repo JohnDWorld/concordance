@@ -76,3 +76,19 @@ def load_explanations(conn: psycopg.Connection[Any], chamber: Chamber, explanati
         ]
         upsert(cur, "vote_explanations", rows, ("ballot_id", "group_id", "source_url"))
     return len(explanations) - len(rows)
+
+
+DEBATE_MAX = 20000  # caractères gardés par débat : la fin, la plus proche du vote
+DEBATE_MIN = 3000  # votes enchaînés sur un même article : le débat remonte avant le résultat précédent
+
+
+def load_debates(conn: psycopg.Connection[Any], chamber: Chamber, debates: dict[str, tuple[Any, str]]) -> int:
+    """Débat (scrutin -> (date de séance, texte)) ; mis à jour seulement si le scrutin est de la même date. Renvoie le nombre mis à jour."""
+    with conn.cursor() as cur:
+        cur.executemany(
+            "update concordance.ballots set debat = %s where chamber = %s and external_id = %s and ballot_date = %s",
+            [(text[-DEBATE_MAX:], chamber, ext, day) for ext, (day, text) in debates.items()],
+        )
+        cur.execute("select count(*) from concordance.ballots where chamber = %s and debat is not null", (chamber,))
+        row = cur.fetchone()
+    return int(row[0]) if row else 0
