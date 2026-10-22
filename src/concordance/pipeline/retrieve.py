@@ -4,6 +4,8 @@ Règle documentée dans docs/methodologie.md, section « Recherche des scrutins 
 """
 
 import argparse
+from datetime import date
+from pathlib import Path
 from typing import Any
 
 import psycopg
@@ -47,17 +49,40 @@ def search(conn: psycopg.Connection[Any], measure_id: int, theme: str, limit: in
     return conn.execute(SEARCH, THEMES[theme] | {"min": MIN_MENTIONS, "measure": measure_id, "limit": limit}).fetchall()
 
 
+CHAMBERS = {"an": "Assemblée", "senat": "Sénat", "pe": "Parlement européen"}
+
+
+def review(conn: psycopg.Connection[Any], limit: int) -> str:
+    """Document de relecture : pour chaque mesure, les scrutins candidats avec leur lien officiel."""
+    lines = [f"# Relecture : scrutins candidats par mesure ({date.today()})", "",
+             f"Périmètre « retraites » : {perimeter_size(conn, 'retraites')} scrutins. "
+             f"Pour chaque mesure, les {limit} plus proches par le sens. Règle : docs/methodologie.md.", ""]
+    measures = conn.execute("""select m.id, c.full_name, m.theme, m.citation, m.source_url from concordance.measures m
+                               join concordance.candidates c on c.id = m.candidate_id order by c.full_name, m.id""").fetchall()
+    for measure_id, name, theme, citation, source in measures:
+        lines += [f"## {name}", "", f"> {citation}", "", f"[Source]({source})", "",
+                  "| # | Chambre | Date | Scrutin | Proximité |", "|---|---|---|---|---|"]
+        for rank, (_, chamber, day, _, title, url, score) in enumerate(search(conn, measure_id, theme, limit), 1):
+            lines.append(f"| {rank} | {CHAMBERS[chamber]} | {day} | [{title[:120]}]({url}) | {score:.2f} |")
+        lines.append("")
+    return "\n".join(lines)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--limit", type=int, default=10, help="scrutins par mesure")
-    limit = parser.parse_args().limit
+    parser.add_argument("--revue", type=Path, help="écrire le document de relecture (Markdown) dans ce fichier")
+    args = parser.parse_args()
     with db.connect() as conn:
+        if args.revue:
+            args.revue.write_text(review(conn, args.limit), encoding="utf-8")
+            return
         print("Périmètre « retraites » :", perimeter_size(conn, "retraites"), "scrutins")
         measures = conn.execute("""select m.id, c.full_name, m.theme, m.citation from concordance.measures m
                                    join concordance.candidates c on c.id = m.candidate_id order by c.full_name, m.id""").fetchall()
         for measure_id, name, theme, citation in measures:
             print(f"\n== {name} : {citation[:110]}")
-            for _, chamber, day, ext, title, _, score in search(conn, measure_id, theme, limit):
+            for _, chamber, day, ext, title, _, score in search(conn, measure_id, theme, args.limit):
                 print(f"   {score:.3f} {chamber:5} {day} {ext:16} {title[:95]}")
 
 
