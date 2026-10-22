@@ -3,6 +3,7 @@
 import argparse
 import json
 import zipfile
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -101,3 +102,18 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+def group_periods(zf: zipfile.ZipFile) -> dict[str, list[tuple[str, date | None, date | None]]]:
+    """Député vers ses mandats de groupe politique (AMO30) : (organe, début, fin)."""
+    out: dict[str, list[tuple[str, date | None, date | None]]] = {}
+    for name in zf.namelist():
+        if "/acteur/" not in name:
+            continue
+        mandats = json.loads(zf.read(name))["acteur"]["mandats"]["mandat"]
+        for m in mandats if isinstance(mandats, list) else [mandats]:
+            if m.get("typeOrgane") == "GP":
+                end = m.get("dateFin")
+                out.setdefault(m["acteurRef"], []).append(
+                    (m["organes"]["organeRef"], date.fromisoformat(m["dateDebut"]), date.fromisoformat(end) if isinstance(end, str) and end else None))
+    return out
