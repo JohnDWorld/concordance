@@ -130,6 +130,7 @@ set -a; . ./.env; set +a
 PGSSLMODE=disable supabase db push --db-url "$DATABASE_URL"   # migrations (CLI Supabase)
 uv sync
 uv run python -m concordance.ingest.an --legislatures 16 17
+uv run python -m concordance.ingest.programmes   # donnees/ : citations vérifiées sur leurs sources
 uv run python -m concordance.pipeline.run --theme retraites
 uv run python -m concordance.eval.run --gold eval/gold_retraites.csv
 ```
