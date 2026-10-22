@@ -56,3 +56,26 @@ class Ballot(BaseModel):
     seance_ref: str | None
     source_url: str
     positions: list[GroupPosition]
+
+
+CandidateEventKind = Literal["declaration", "retrait", "battu_primaire", "liste_officielle", "absent_liste_officielle"]
+
+
+class CandidateEventRow(BaseModel):
+    """Ligne de donnees/candidats.csv : une entrée ou sortie de la liste, datée et sourcée."""
+    candidat: str
+    nom: str
+    parti: str
+    evenement: CandidateEventKind
+    date: date
+    source_url: str
+    note: str = ""
+
+
+class MeasureRow(BaseModel):
+    """Ligne de donnees/mesures_retraites.csv : citation exacte d'une source officielle du candidat."""
+    candidat: str
+    sujet: str
+    citation: str
+    source_url: str
+    consulte_le: date
