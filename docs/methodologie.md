@@ -10,6 +10,15 @@ Une seule règle, appliquée à tous les candidats sans exception :
 4. Un candidat à une primaire est inclus tant qu'il est en lice. S'il est battu, il est archivé comme à la règle 3.
 5. Chaque entrée ou sortie de la liste est datée et sourcée (déclaration de candidature, résultat de primaire, retrait, publication officielle).
 
+## Mesures des programmes
+
+- **Candidats retenus** : seule une déclaration de candidature confirmée et datée par une source (primaire de préférence, sinon presse) fait entrer un candidat. Une déclaration non confirmée ou sans date reste en attente, signalée, jamais devinée.
+- **Sources** : uniquement les sources officielles du candidat (site de campagne, site du parti, programme publié, communiqué). Ni agrégateur, ni résumé de presse, ni programme d'une élection antérieure. Quand la page officielle n'est plus en ligne, une archive datée de cette page (Wayback Machine) est acceptée, et c'est son adresse qui est citée.
+- **Mesure retraites** : un passage qui porte explicitement sur les retraites (âge de départ, durée de cotisation, montant ou indexation des pensions, minimum vieillesse, financement, cumul emploi-retraite, pénibilité, carrières longues, capitalisation, organismes de retraite).
+- **Citation** : copie exacte d'un passage contigu, la ou les phrases complètes les plus courtes qui expriment la mesure, jamais une phrase coupée.
+- **Vérification** : à chaque chargement, la source est retéléchargée et la citation doit s'y trouver caractère pour caractère, espaces ignorés (la conversion d'une page en texte ajoute ou retire des espaces). Sinon, la mesure est rejetée.
+- **Relecture** : candidats et mesures vivent dans des fichiers du dépôt (`donnees/`), relus avant chargement ; toute correction est tracée.
+
 ## Recherche des scrutins liés à une mesure
 
 L'intitulé d'un scrutin dit rarement son sujet (« l'amendement n° 7 de M. X après l'article 2 de la proposition de loi... »), et une motion de censure ne nomme pas le texte qu'elle vise. Les explications de vote et le débat qui précède le vote, eux, en parlent. Le **débat** d'un scrutin est le texte du compte rendu intégral depuis le résultat précédent ; s'il fait moins de 3 000 caractères (votes enchaînés sur un même article), il remonte jusqu'à 3 000 caractères. La recherche se fait donc en deux temps, avec la même règle pour toutes les mesures :
