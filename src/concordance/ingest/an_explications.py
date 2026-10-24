@@ -149,6 +149,30 @@ def parse_explanations(raw: str, ballots: Ballots, periods: dict[str, list[tuple
     return out, stats
 
 
+def parse_debates(raw: str, ballots: Ballots) -> dict[str, tuple[date, str]]:
+    """Débat qui précède chaque scrutin de la séance : paragraphes depuis le résultat précédent."""
+    seance = re.search(r"<seanceRef>(.*?)</seanceRef>", raw)
+    day_text = re.search(r"<dateSeance>(\d{8})", raw)
+    if not (seance and day_text):
+        return {}
+    day = date(int(day_text.group(1)[:4]), int(day_text.group(1)[4:6]), int(day_text.group(1)[6:]))
+    debates: dict[str, tuple[date, str]] = {}
+    spoken: list[str] = []  # paragraphes de la séance, hors annonces de résultat
+    start = 0  # début du débat depuis le résultat précédent
+    for p in paragraphs(raw[raw.find("<contenu>"):]):
+        if RESULT in p.text:
+            first = start
+            while first > 0 and sum(len(t) for t in spoken[first:]) < db.DEBATE_MIN:
+                first -= 1
+            ballot = match_ballot(p.text, ballots.get(seance.group(1), []))
+            if ballot is not None:
+                debates[ballot] = (day, " ".join(spoken[first:]))
+            start = len(spoken)
+        else:
+            spoken.append(p.text)
+    return debates
+
+
 def ballots_by_seance(zf: zipfile.ZipFile) -> Ballots:
     out: Ballots = {}
     for name in zf.namelist():
@@ -167,6 +191,7 @@ def main() -> None:
     with zipfile.ZipFile(download(AMO30, Path("an/AMO30.json.zip"))) as zf:
         periods = group_periods(zf)
     explanations: list[VoteExplanation] = []
+    debates: dict[str, tuple[date, str]] = {}
     stats: Counter[str] = Counter()
     for leg in legislatures:
         cached = {name: RAW / f"an/{leg}/{name}" for name in ("Scrutins.json.zip", "syseron.xml.zip")}
@@ -180,11 +205,14 @@ def main() -> None:
         with zipfile.ZipFile(reports) as zf:
             for name in zf.namelist():
                 if name.endswith(".xml"):
-                    found, page_stats = parse_explanations(zf.read(name).decode("utf-8"), ballots, periods)
+                    raw = zf.read(name).decode("utf-8")
+                    found, page_stats = parse_explanations(raw, ballots, periods)
+                    debates |= parse_debates(raw, ballots)
                     explanations += found
                     stats += page_stats
     with db.connect() as conn:
         stats["explication sans scrutin du même jour"] = db.load_explanations(conn, "an", explanations)
+        stats["scrutins avec débat"] = db.load_debates(conn, "an", debates)
     print("Explications de vote (AN) :", dict(stats))
 
 
