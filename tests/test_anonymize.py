@@ -6,7 +6,7 @@ DICTIONARY = compile_dictionary(
     full_names=["Laurent Marcangeli", "Mathilde Panot", "Bertrand Pancher", "Xavier Bertrand"],
     surnames=["Marcangeli", "Panot", "Petit", "Pancher", "Bertrand"],
     groups=[("Horizons et apparentés", 1), ("HOR", 1), ("La France insoumise - Nouvelle Union Populaire écologique et sociale", 2),
-            ("LFI - NUPES", 2), ("Non inscrit", 3), ("NI", 3), ("Ecolo - NUPES", 4), ("LIOT", 5), ("LIOT", 6)],
+            ("LFI - NUPES", 2), ("Non inscrit", 3), ("NI", 3), ("Ecolo - NUPES", 4), ("LIOT", 5), ("LIOT", 6), ("À Droite", 7), ("Droite Républicaine", 8)],
     parties=["Rassemblement national", "Horizons et apparentés"],
 )
 
@@ -45,3 +45,19 @@ def test_shared_name_takes_judged_label() -> None:
     assert out == f"Le {next(lab for lab, g in mapping.items() if g == [6])} votera la motion."
     [out], mapping = anonymize(["Le groupe LIOT votera la motion."], 1, DICTIONARY, random.Random(0))
     assert mapping[out.split()[1] + " " + out.split()[2]] == [5, 6]
+
+
+def test_names_in_context_and_group_variants() -> None:
+    text = ("La loi Pancher, votée sous le gouvernement Bertrand, et M. le député Marcangeli : les écolos "
+            "et les Horizons et Apparentés en parlent ; un petit Bertrand de village reste un mot.")
+    [out], mapping = anonymize([text], 1, DICTIONARY, random.Random(0))
+    judged = next(lab for lab, g in mapping.items() if g == [1])
+    assert out == (f"La loi {PERSON}, votée sous le gouvernement {PERSON}, et {PERSON} : les {TERM} "
+                   f"et les {judged} en parlent ; un petit Bertrand de village reste un mot.")
+
+
+def test_short_group_names_do_not_swallow_common_words() -> None:
+    text = "Le groupe Droite républicaine, assis à droite, et le groupe À Droite."
+    [out], mapping = anonymize([text], 8, DICTIONARY, random.Random(0))
+    dr, ad = (next(lab for lab, g in mapping.items() if g == [i]) for i in (8, 7))
+    assert out == f"Le {dr}, assis à droite, et le {ad}."

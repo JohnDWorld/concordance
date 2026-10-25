@@ -23,18 +23,35 @@ from concordance.ingest.senat import copy_rows
 
 PERSON, PARTY, TERM = "[personne]", "[parti]", "[terme partisan]"
 LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-CIVILITY = r"(?:M\.|Mme|Mmes|MM\.|Monsieur|Madame)"
+CIVILITY = r"(?:M\.|Mme|Mmes|MM\.|Monsieur|Madame)(?:\s+(?:le|la)\s+(?:député|députée|sénateur|sénatrice|ministre|président|présidente|rapporteur|rapporteure|Premier ministre))?"
+# Mots qui, devant un nom de famille, désignent une personne (« loi Duplomb », « gouvernement Barnier »).
+BEFORE_NAME = r"(?:loi|lois|réforme|gouvernement|ministre|Premier ministre|présidente?|collègues?|amendement|rapport|plan|mission)"
+# Personnalités politiques absentes des données parlementaires (présidents de la République, anciens dirigeants).
+OUTSIDE_DATA = ("Emmanuel Macron", "François Hollande", "Nicolas Sarkozy", "Jean-Marie Le Pen")
 # Désignations d'un camp qui ne sont ni un nom de groupe ni un nom de parti des données.
 PARTISAN_TERMS = ("insoumis", "insoumise", "insoumises", "lepéniste", "lepénistes", "macroniste", "macronistes",
                   "mélenchoniste", "mélenchonistes", "frontiste", "frontistes", "zemmouriste", "zemmouristes",
-                  "NUPES", "Nupes", "NFP", "Nouveau Front populaire", "Nouveau Front Populaire")
+                  "NUPES", "Nupes", "NFP", "Nouveau Front populaire", "Nouveau Front Populaire",
+                  # anciens noms de partis et désignations familières d'un camp
+                  "Front national", "UMP", "En Marche", "La République en marche", "LREM", "LaREM",
+                  "écolos", "socialos", "socialistes", "communistes", "écologistes")
 
 
 def variants(name: str) -> set[str]:
-    """Écritures d'un même nom : espaces autour des tirets, apostrophes (les accents sont gérés par le motif)."""
+    """Écritures d'un même nom : espaces autour des tirets, apostrophes, article initial (« Les Républicains »,
+    « les Républicains », « Républicains ») ; les accents sont gérés par le motif."""
     name = " ".join(name.split())
     out = {name, re.sub(r"\s*-\s*", "-", name), re.sub(r"\s*-\s*", " - ", name), name.replace("’", "'")}
+    article = re.match(r"(?:Les|La|Le|L’|L')\s*(?=[A-ZÉ])", name)
+    if article:
+        out |= {name[article.end():], name[0].lower() + name[1:]}
+    words = name.split()
+    if len(words) == 2 and words[0] not in SMALL_WORDS:  # « Droite républicaine », « non inscrit » ; pas « à droite »
+        out |= {f"{words[0]} {words[1].lower()}", f"{words[0].lower()} {words[1].lower()}"}
     return {v for v in out if len(v) >= 2}
+
+
+SMALL_WORDS = {"À", "Au", "Aux", "La", "Le", "Les", "De", "Du", "Des", "En", "Et", "L’", "L'"}
 
 
 def unaccented(c: str) -> str:
@@ -70,17 +87,20 @@ class Dictionary:
 
 def compile_dictionary(full_names: Iterable[str], surnames: Iterable[str], groups: Iterable[tuple[str, int]],
                        parties: Iterable[str]) -> Dictionary:
-    full = alternation(v for n in full_names for v in variants(n))
-    last = alternation(v for n in surnames for v in variants(n))
+    full = alternation(v for n in (*full_names, *OUTSIDE_DATA) for v in variants(n))
+    last = alternation(v for n in (*surnames, *(n.split(" ", 1)[1] for n in OUTSIDE_DATA)) for v in variants(n))
     # Après une civilité, le nom complet d'abord : « M. Bertrand Pancher », pas « M. Bertrand » + « Pancher ».
-    persons = re.compile(rf"\b(?:{CIVILITY}\s+(?:{full}|{last})|{full})\b", re.IGNORECASE)
+    # Un nom seul n'est masqué qu'après une civilité ou un mot qui désigne une personne (« loi Duplomb »),
+    # avec sa majuscule : « Petit » ou « Blanc » restent des mots ordinaires ailleurs.
+    persons = re.compile(rf"\b(?:(?i:{CIVILITY})\s+(?i:{full}|{last})|(?i:{full})|(?P<ctx>{BEFORE_NAME}\s+)(?:{last}))\b")
     by_name: dict[str, set[int]] = {}
     for name, group_id in groups:
         for v in variants(name):
             by_name.setdefault(v, set()).add(group_id)
-    # Sigles et noms de groupe : sensibles à la casse (« NI », « RE » ne sont pas « ni », « re »).
-    group_patterns = [(re.compile(rf"(?<![\w-]){pattern(n)}(?![\w-])"), frozenset(ids)) for n, ids in
-                      sorted(by_name.items(), key=lambda kv: len(kv[0]), reverse=True)]
+    # Sigles et noms courts : sensibles à la casse (« NI » n'est pas « ni », « À Droite » n'est pas « à droite »),
+    # avec les variantes ci-dessus ; noms de trois mots ou plus : casse libre.
+    group_patterns = [(re.compile(rf"(?<![\w-]){pattern(n)}(?![\w-])", re.IGNORECASE if len(n.split()) >= 3 else 0), frozenset(ids))
+                      for n, ids in sorted(by_name.items(), key=lambda kv: len(kv[0]), reverse=True)]
     party_names = {v for p in parties for v in variants(p)} - set(by_name)
     return Dictionary(
         persons=persons,
@@ -111,7 +131,7 @@ def anonymize(texts: list[str], judged_group: int, dictionary: Dictionary, rng: 
 
     out = []
     for text in texts:
-        text = dictionary.persons.sub(PERSON, text)
+        text = dictionary.persons.sub(lambda m: (m.group("ctx") or "") + PERSON, text)  # « loi » reste devant
         for regex, ids in dictionary.groups:
             if regex.search(text):  # une lettre n'est attribuée qu'à un groupe réellement cité
                 text = regex.sub(label(ids), text)
