@@ -43,6 +43,12 @@ L'anonymiseur est accepté si son taux ne dépasse pas la référence au-delà d
 
 Le garde-fou principal contre le biais est le test contrefactuel : on permute les étiquettes `Groupe A`, `Groupe B`... et le verdict ne doit pas changer.
 
+**Anonymiseur** (`src/concordance/pipeline/anonymize.py`) : le groupe jugé devient « Groupe X » (lettre tirée au hasard à chaque jugement), chaque autre groupe cité une autre lettre (un nom porté par plusieurs groupes, comme « LIOT » en 16e et 17e législature, prend la lettre du groupe jugé s'il le désigne), les partis « [parti] », les personnes « [personne] », les termes partisans « [terme partisan] ». Le dictionnaire vient des données : personnes d'AMO30, sénateurs, eurodéputés, candidats, libellés et sigles de tous les groupes, partis des candidats et partis nationaux. S'y ajoutent deux courtes listes publiées dans le code : personnalités absentes des données parlementaires (présidents de la République, Jean-Marie Le Pen) et termes partisans (insoumis, macroniste, lepéniste, anciens noms de partis...). Un nom de famille seul n'est masqué qu'après une civilité ou un mot qui désigne une personne (« loi Duplomb ») : « Petit » ou « Blanc » restent des mots ordinaires. Les noms de groupe courts sont sensibles à la casse (« À Droite » n'est pas « à droite »).
+
+**Protocole du test** (`src/concordance/eval/leakage.py`) : 101 explications de vote de l'Assemblée (17e législature), 8 par groupe tirées au hasard (graine 2027 ; 5 pour les non-inscrits), coupées à environ 1 500 caractères (`eval/fuite_echantillon.jsonl`). Référence (`eval/fuite_reference.jsonl`) : chaque texte relu en entier, seuls les noms de groupes, de partis, de personnes politiques actives depuis 2017 et les termes partisans remplacés ; un contrôle automatique vérifie que rien d'autre n'a changé. Devineur : `qwen3-30b-a3b` (local), qui choisit le groupe parmi les 12 de la législature. Marge fixée avant le test : 5 points. Résultats datés dans `docs/evaluation/fuite.md`.
+
+Limite : sur 101 textes, l'incertitude est d'environ ±8 points ; le test sera refait sur un échantillon plus large avant publication.
+
 ## Données de vote
 
 - **Chiffres rapportés tels quels** : pour, contre, abstention, non-votants et, à l'Assemblée, non-votants volontaires, sans regroupement ni interprétation.
