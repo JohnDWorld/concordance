@@ -19,6 +19,17 @@ Une seule règle, appliquée à tous les candidats sans exception :
 - **Vérification** : à chaque chargement, la source est retéléchargée et la citation doit s'y trouver caractère pour caractère, espaces ignorés (la conversion d'une page en texte ajoute ou retire des espaces). Sinon, la mesure est rejetée.
 - **Relecture** : candidats et mesures vivent dans des fichiers du dépôt (`donnees/`), relus avant chargement ; toute correction est tracée.
 
+## Recherche des scrutins liés à une mesure
+
+L'intitulé d'un scrutin dit rarement son sujet (« l'amendement n° 7 de M. X après l'article 2 de la proposition de loi... »), et une motion de censure ne nomme pas le texte qu'elle vise. Les explications de vote et le débat qui précède le vote, eux, en parlent. Le **débat** d'un scrutin est le texte du compte rendu intégral depuis le résultat précédent ; s'il fait moins de 3 000 caractères (votes enchaînés sur un même article), il remonte jusqu'à 3 000 caractères. La recherche se fait donc en deux temps, avec la même règle pour toutes les mesures :
+
+1. **Périmètre du thème** : un scrutin relève du thème si son intitulé ou son dossier contient un mot du thème (recherche plein texte en français ; anglais pour le Parlement européen), ou si ses explications de vote, ou son débat, le mentionnent au moins 3 fois. Mots du thème « retraites » : retraite, pension, vieillesse, âge légal, âge de départ ; retirement, old-age. Mentions comptées dans les explications et le débat : mots commençant par « retraite » ou « pension » (« suspension » ne compte pas).
+2. **Classement** : dans ce périmètre, les scrutins sont classés par proximité de sens avec la mesure (embeddings du modèle local `qwen3-embedding:0.6b`). Le texte d'un scrutin réunit son intitulé, son dossier, le début de l'explication de chaque groupe et le début de son débat.
+
+Les scrutins retenus ne sont que des candidats : le juge dit ensuite si le vote est lié à la mesure (`hors_sujet` sinon), et les résultats sont relus avant toute publication.
+
+Limite connue : un vote sur un amendement dont la discussion a eu lieu bien avant le scrutin peut échapper au périmètre (exemple : l'amendement n° 2686 du Gouvernement à l'article 45 bis du budget de la Sécurité sociale 2026, alors que le vote sur l'article lui-même est retenu). Le contenu des amendements (dispositif, exposé sommaire) comblera ce manque une fois chargé.
+
 ## Anonymisation et test de fuite
 
 Le juge ne voit ni nom de groupe, ni nom de personne, ni nom de parti. Mais le fond d'une mesure ou d'une explication de vote suffit souvent à situer un bord politique, et aucun anonymiseur ne peut l'effacer sans détruire le texte. Viser « pas mieux que le hasard » serait donc un objectif impossible.
