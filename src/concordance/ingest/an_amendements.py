@@ -9,14 +9,13 @@ import json
 import re
 import zipfile
 from collections import Counter, defaultdict
-from datetime import date
 from pathlib import Path
 from typing import Any
 
 import psycopg
 
 from concordance import db
-from concordance.ingest.an import AMO30, BASE
+from concordance.ingest.an import AMO30, BASE, group_periods
 from concordance.ingest.raw import RAW, download
 from concordance.models import Amendment
 from concordance.rules import Membership, amendment_scope, group_at, normalize, series_key
@@ -81,19 +80,6 @@ def measure(amendments: list[Amendment]) -> None:
         a.serie = len(variants[(a.texte_ref, series_key(a.dispositif or ""))]) > 1
         a.suppression, a.forme, a.mots_ajoutes = amendment_scope(a.dispositif or "")
 
-
-def group_periods(zf: zipfile.ZipFile) -> dict[str, list[Membership]]:
-    """Député vers ses mandats de groupe politique (AMO30)."""
-    out: dict[str, list[Membership]] = defaultdict(list)
-    for name in zf.namelist():
-        if "/acteur/" not in name:
-            continue
-        for m in as_list(json.loads(zf.read(name))["acteur"]["mandats"]["mandat"]):
-            if m.get("typeOrgane") == "GP":
-                end = value(m.get("dateFin"))
-                out[m["acteurRef"]].append(
-                    (m["organes"]["organeRef"], date.fromisoformat(m["dateDebut"]), date.fromisoformat(end) if end else None))
-    return out
 
 
 def load(conn: psycopg.Connection[Any], amendments: list[Amendment], periods: dict[str, list[Membership]]) -> Counter[str]:
