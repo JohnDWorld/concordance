@@ -15,8 +15,10 @@ BATCH = 64
 # Qwen3-Embedding : les requêtes portent une consigne, les documents non.
 QUERY = "Instruct: Retrouver les scrutins parlementaires qui portent sur cette mesure de programme\nQuery: {}"
 # Texte d'un scrutin : son intitulé ne dit souvent pas le sujet (« l'amendement n° 7 de M. X à l'article 2... »),
-# les explications de vote et le débat, si. On ajoute le début de l'explication de chaque groupe et du débat.
+# l'amendement voté, les explications de vote et le débat, si. On ajoute le début de chacun.
 BALLOT_TEXT = """concat_ws(' ', intitule, objet, dossier, (
+    select left(concat_ws(' ', a.dispositif, a.expose_sommaire), 1000)
+    from concordance.amendments a where a.id = ballots.amendment_id), (
     select left(string_agg(left(e.texte, 300), ' ' order by e.id), 1000)
     from concordance.vote_explanations e where e.ballot_id = ballots.id), left(debat, 1000))"""
 
