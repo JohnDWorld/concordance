@@ -45,6 +45,7 @@ class Amendment(BaseModel):
     auteur_ref: str | None
     group_external_id: str | None
     date_depot: date | None
+    date_sort: date | None
     etat: str | None
     sous_etat: str | None
     sort: str | None

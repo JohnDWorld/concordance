@@ -9,6 +9,7 @@ import json
 import re
 import zipfile
 from collections import Counter, defaultdict
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -57,6 +58,7 @@ def parse_amendment(a: dict[str, Any], dossier_ref: str) -> Amendment:
         auteur_ref=value(auteur.get("acteurRef")),
         group_external_id=value(auteur.get("groupePolitiqueRef")),
         date_depot=value(cycle.get("dateDepot")),
+        date_sort=date.fromisoformat(sort[:10]) if isinstance(sort := value(cycle.get("dateSort")), str) else None,
         etat=(value(etats.get("etat")) or {}).get("libelle"),
         sous_etat=(value(etats.get("sousEtat")) or {}).get("libelle"),
         sort=value(cycle.get("sort")),
@@ -112,10 +114,31 @@ def load(conn: psycopg.Connection[Any], amendments: list[Amendment], periods: di
     return stats
 
 
+LINK = """
+update concordance.ballots b set amendment_id = m.amendment_id
+from (
+    select s.id as ballot_id, min(a.id) as amendment_id
+    from concordance.ballots s
+    join concordance.amendments a
+      on a.legislature = s.legislature and a.organe_examen = 'AN' and a.date_sort = s.ballot_date
+     and regexp_replace(a.numero, '^[A-Z]+-', '') = substring(s.intitule from 'n° ?([0-9]+)')
+    where s.chamber = 'an' and s.legislature = %(leg)s and s.nature = 'amendement'
+    group by s.id having count(*) = 1
+) m
+where b.id = m.ballot_id
+"""
+
+
+def link_ballots(conn: psycopg.Connection[Any], legislature: int) -> int:
+    """Relie chaque scrutin sur un amendement à cet amendement : même numéro (sans le préfixe « I- » des lois de
+    finances), examiné en séance, sort daté du jour du scrutin. Seules les correspondances uniques sont gardées."""
+    return conn.execute(LINK, {"leg": legislature}).rowcount
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--legislature", type=int, required=True)
-    parser.add_argument("--dossier", required=True, help="référence du dossier législatif (DLR5L...)")
+    parser.add_argument("--dossier", help="référence du dossier législatif (DLR5L...) ; tous les dossiers sinon")
     args = parser.parse_args()
 
     with zipfile.ZipFile(download(AMO30, Path("an/AMO30.json.zip"))) as zf:
@@ -123,17 +146,22 @@ def main() -> None:
     dest = Path(f"an/{args.legislature}/Amendements.json.zip")
     # ponytail: archive gardée si déjà présente (plusieurs centaines de Mo) ; la supprimer pour la rafraîchir.
     path = RAW / dest if (RAW / dest).exists() else download(AMENDEMENTS.format(leg=args.legislature), dest)
-    prefix = f"json/{args.dossier}/"
-    with zipfile.ZipFile(path) as zf:
-        amendments = [parse_amendment(json.loads(zf.read(n))["amendement"], args.dossier)
-                      for n in zf.namelist() if n.startswith(prefix) and n.endswith(".json")]
-    if not amendments:
-        raise SystemExit(f"aucun amendement pour le dossier {args.dossier}")
-    measure(amendments)
-    with db.connect() as conn:
-        stats = load(conn, amendments, periods)
-    print(f"{args.dossier} : {len(amendments)} amendements, {len({a.texte_ref for a in amendments})} textes")
-    print("Écarts :", dict(stats))
+    stats: Counter[str] = Counter()
+    with zipfile.ZipFile(path) as zf, db.connect() as conn:
+        by_dossier: dict[str, list[str]] = defaultdict(list)
+        for n in zf.namelist():
+            if n.endswith(".json") and (args.dossier is None or n.startswith(f"json/{args.dossier}/")):
+                by_dossier[n.split("/")[1]].append(n)
+        if not by_dossier:
+            raise SystemExit(f"aucun amendement pour le dossier {args.dossier}")
+        for dossier, names in sorted(by_dossier.items()):  # un dossier à la fois : la mémoire reste bornée
+            amendments = [parse_amendment(json.loads(zf.read(n))["amendement"], dossier) for n in names]
+            measure(amendments)
+            stats += load(conn, amendments, periods)
+            conn.commit()
+            stats["amendements"] += len(amendments)
+        stats["scrutins reliés à leur amendement"] = link_ballots(conn, args.legislature)
+    print(f"{len(by_dossier)} dossiers :", dict(stats))
 
 
 if __name__ == "__main__":
