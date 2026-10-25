@@ -39,7 +39,10 @@ Vérifié le 2026-10-20. Tout ce qui n'a pas pu être confirmé sur la source es
   - Piège : la page affiche le chemin `/VP/` en majuscules, qui renvoie 404. Seul `/vp/` fonctionne.
 - Structure : `xml/compteRendu/CRSANR5L{lég}S{année}O1N{n}.xml`, racine `compteRendu` avec `uid`, `seanceRef`, `metadonnees` (`dateSeance`, `numSeance`, `legislature`), `contenu`. Chaque `paragraphe` porte `id_syceron`, `id_acteur` (PA...), `id_mandat` (PM...), `ordre_absolu_seance`, `roledebat`. Trier par `ordre_absolu_seance` (`id_syceron` n'est pas chronologique).
 - Lien avec les scrutins : `seanceRef` du compte rendu = `seanceRef` des scrutins de la séance (vérifié sur 1240 et 1241). Le scrutin précis dans la séance se déduit du titre et de l'ordre.
-- Explications de vote : aucune balise dédiée. Repérage par la phrase de la présidence (« Nous en venons aux explications de vote »).
+- Explications de vote : aucune balise dédiée dans le corps. Le **sommaire** en tête du fichier (`titreStruct` puis `para id_syceron="..."`) liste, par section, les orateurs et l'ancre de leur intervention, avec leur groupe entre parenthèses dans certaines séances (« M. Jean-Claude Raux (Écolo-NUPES) »). Les entrées vides sont auto-fermantes (`<para .../>`).
+- Chaque intervention extraite est encadrée par `interExtraction` (aussi utilisée pour les questions au Gouvernement). Paragraphes : `code_grammaire` = `PAROLE_GENERIQUE` (discours) ou `INTERRUPTION_1_10` (interruption).
+- Résultat d'un scrutin : « Voici le résultat du scrutin : ... Pour l'adoption 278 » (ou « Pour l'adoption : 145 », « Pour l'approbation 372 Contre 99 »), **sans numéro de scrutin**. Rattachement par la séance (`seanceRef`) et les chiffres (`syntheseVote.decompte`).
+- Contrôle : le groupe attribué (mandat officiel à la date, AMO30) concorde avec le sigle affiché par le compte rendu dans 100 % des 3 206 cas où il est affiché (écarts d'écriture seulement : « LFI-NUPES » / « LFI - NUPES »).
 - Groupe de l'orateur : absent du compte rendu. À dériver soit de `vote.decompteNominatif` du scrutin (l'`acteurRef` y figure dans son groupe), soit de `id_mandat` via AMO. `TODO: vérifier` les deux jointures.
 - Ancre publique : `id_syceron` = ancre HTML. `https://www.assemblee-nationale.fr/dyn/16/comptes-rendus/seance/CRSANR5L16S2023O1N182` redirige vers l'URL lisible de la séance.
 - Exemple vérifié (texte identique dans le XML et la page publique) : « C’est pourquoi les députés du groupe Horizons et apparentés ne voteront pas en faveur des motions de censure. », https://www.assemblee-nationale.fr/dyn/16/comptes-rendus/seance/session-ordinaire-de-2022-2023/premiere-seance-du-lundi-20-mars-2023#3056182.
@@ -104,6 +107,11 @@ Vérifié le 2026-10-20. Tout ce qui n'a pas pu être confirmé sur la source es
 - Format déclaré expérimental par HowTheyVote, il peut changer.
 - Licence : ODbL 1.0 pour la base, DbCL 1.0 pour le contenu (https://howtheyvote.eu/data). Pas de fichier de licence dans le dépôt. Attribution obligatoire et **partage à l'identique** : toute base dérivée publiée doit être sous ODbL. Exceptions : photos et résumés de votes.
 
+- Page d'un vote : `https://howtheyvote.eu/votes/{id}` (vérifiée), avec liens vers le procès-verbal officiel des votes par appel nominal (`PV-10-...-RCV_FR.xml`) et la fiche de procédure de l'Observatoire législatif.
+- Constats à l'ingestion : résultat (`result`) vide pour 69 % des votes, laissé vide plutôt que déduit ; intitulés en anglais seulement (`display_title`), à traduire pour les fiches ; législatures déduites de `group_memberships` (9e depuis le 2019-07-02, 10e depuis le 2024-07-16).
+- Partis nationaux : `member_votes.national_party_id` donne le parti de l'eurodéputé au jour du vote ; libellés dans `national_parties` (dont « Sans parti » et « Indépendant », qui ne sont pas des partis). 40 délégations françaises sur les 9e et 10e législatures.
+- Attribution ODbL : chaque fiche qui affiche un vote du PE cite HowTheyVote.eu et sa licence.
+
 ### Portail open data du PE
 
 - API : https://data.europarl.europa.eu/api/v2/ (description OpenAPI). Exige l'en-tête `Accept: application/ld+json` (sinon 406). Licence de l'API : CC BY 4.0.
@@ -123,6 +131,8 @@ Vérifié le 2026-10-20. Tout ce qui n'a pas pu être confirmé sur la source es
   - candidatures avec statut sourcé : https://www.data.gouv.fr/datasets/candidatures-a-lelection-presidentielle-2027-statuts-sources (JSON, 51 personnalités, Licence Ouverte 2.0, mis à jour le 2026-10-14) ;
   - votes des candidats parlementaires : https://www.data.gouv.fr/datasets/votes-au-parlement-des-candidats-a-lelection-presidentielle-2027 (JSON, 188 scrutins, Licence Ouverte 2.0) ;
   - programmes : uniquement dans le dépôt https://github.com/2027etmoi/2027etmoi (`data/programmes/`, contenu `TODO: vérifier`), pas sur data.gouv.fr. Code sans licence libre.
+- Relevé du 2026-10-22 : 54 personnalités dans le jeu, 32 « déclarées ». Après vérification à la source : 28 déclarations confirmées et datées (dont 3 datées par une recherche complémentaire : Delphine Batho, Édouard Philippe, Marine Tondelier), 4 non confirmées (Xavier Bertrand, Emmanuel Dubuisson, Anasse Kazib, Manolo Mlekuz). Plusieurs sources de 2027etmoi ne confirmaient pas la déclaration (annuaire des entreprises, article sans rapport) : la source retenue est alors une autre, vérifiée. Les champs « bloc » (classement politique) et « propositions » (résumés) du jeu ne sont pas utilisés.
+- Programmes : rares à cette date. Sites injoignables ou bloquant les accès automatisés (marinetondelier.fr en 403, reconquete.fr, francelibre.fr) ; pages de chapitre du livre de melenchon2027.fr en 404, lues sur leur archive Wayback du 2026-08-29.
 - Usage : point de départ pour repérer candidatures et programmes. Chaque candidature et chaque mesure est recoupée avec sa source officielle (règle 2 de `methodologie.md`).
 - Liste officielle : publiée par le Conseil constitutionnel après la clôture des parrainages, attendue en mars 2027 d'après la presse. `TODO: vérifier` sur le site du Conseil.
 

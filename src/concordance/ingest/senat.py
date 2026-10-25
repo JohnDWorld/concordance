@@ -232,6 +232,19 @@ def parse_explanations(page: str, when: date, url: str, members: dict[str, list[
     return out, stats
 
 
+def parse_debates(page: str, when: date) -> dict[str, tuple[date, str]]:
+    """Débat qui précède chaque scrutin du compte rendu intégral : texte depuis le résultat précédent."""
+    page = html.unescape(page)
+    debates, start = {}, 0
+    for m in SCRUTIN.finditer(page):
+        text = clean(page[start:m.start()])
+        if len(text) < db.DEBATE_MIN:  # votes enchaînés : le débat remonte avant le résultat précédent
+            text = clean(page[max(0, m.start() - 10 * db.DEBATE_MIN):m.start()])[-db.DEBATE_MIN:]
+        debates[f"scr{current_session(when)}-{m.group(1)}"] = (when, text)
+        start = m.end()
+    return debates
+
+
 def current_session(today: date) -> int:
     """Année de début de la session ordinaire en cours (elle s'ouvre en octobre)."""
     return today.year if today.month >= 10 else today.year - 1
@@ -261,6 +274,7 @@ def main() -> None:
                 errors.append(f"{dest.name} : {e}")
 
     explanations: list[VoteExplanation] = []
+    debates: dict[str, tuple[date, str]] = {}
     stats: Counter[str] = Counter()
     for when in sorted({b.ballot_date for b in ballots}):
         url = CRI.format(day=when)
@@ -273,13 +287,16 @@ def main() -> None:
                 continue
             finally:
                 time.sleep(PAUSE)
-        found, page_stats = parse_explanations((RAW / dest).read_text(), when, url, members)
+        page = (RAW / dest).read_text()
+        found, page_stats = parse_explanations(page, when, url, members)
+        debates |= parse_debates(page, when)
         explanations += found
         stats += page_stats
 
     with db.connect() as conn:
         db.load_votes(conn, "senat", groups, ballots)
         stats["explication sans scrutin du même jour"] = db.load_explanations(conn, "senat", explanations)
+        stats["scrutins avec débat"] = db.load_debates(conn, "senat", debates)
     print(f"Sénat : {len(groups)} groupes, {len(ballots)} scrutins, {sum(len(b.positions) for b in ballots)} positions")
     print("Explications de vote :", dict(stats))
     for error in errors:

@@ -77,7 +77,7 @@ URLs, formats et licences vérifiés le 2026-10-20 : voir [docs/sources.md](docs
 ## Modèle de données (première version)
 
 - `candidates` : candidat, parti, statut de candidature
-- `parl_groups` : chambre, législature, sigle, libellé, dates (dérivé des données "organes", jamais codé en dur)
+- `parl_groups` : chambre, législature, sigle, libellé, dates, catégorie (groupe, ou délégation nationale française au Parlement européen) ; dérivé des données "organes", jamais codé en dur
 - `candidate_group_links` : lien candidat ↔ groupe (membre, allié, ne siège pas)
 - `measures` : mesure atomique, thème, texte, citation source, URL, date de récupération, embedding
 - `ballots` : scrutin, chambre, date, intitulé, nature (texte entier, article, amendement, motion), dossier, embedding
@@ -130,6 +130,7 @@ set -a; . ./.env; set +a
 PGSSLMODE=disable supabase db push --db-url "$DATABASE_URL"   # migrations (CLI Supabase)
 uv sync
 uv run python -m concordance.ingest.an --legislatures 16 17
+uv run python -m concordance.ingest.programmes   # donnees/ : citations vérifiées sur leurs sources
 uv run python -m concordance.pipeline.run --theme retraites
 uv run python -m concordance.eval.run --gold eval/gold_retraites.csv
 ```
