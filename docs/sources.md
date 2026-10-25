@@ -52,7 +52,9 @@ Vérifié le 2026-10-20. Tout ce qui n'a pas pu être confirmé sur la source es
 - Page : https://data.assemblee-nationale.fr/travaux-parlementaires/amendements/tous-les-amendements.
 - 17 : https://data.assemblee-nationale.fr/static/openData/repository/17/loi/amendements_div_legis/Amendements.json.zip (344 Mo, 141 194 JSON). 16 : même chemin avec `16`.
 - Champs : `uid`, `identification.numeroLong`, `signataires.auteur.acteurRef`, `signataires.auteur.groupePolitiqueRef`, `corps.contenuAuteur.exposeSommaire` (HTML), `corps.contenuAuteur.dispositif`, `cycleDeVie.dateDepot`, `cycleDeVie.sort`, `cycleDeVie.dateSort`, `seanceDiscussionRef` (souvent vide).
-- Lien avec les scrutins : aucun champ direct. À déduire par séance et par le titre du scrutin (« l'amendement n° 70 de... »). `TODO: vérifier` sur un cas réel.
+- Lien avec les scrutins : aucun champ direct. Le scrutin donne le numéro sans préfixe (« l'amendement n° 921 »), l'amendement le donne avec (`numeroLong` = « I-921 » pour une loi de finances, « CE198 » en commission). Rattachement retenu : même législature, examen en séance (`prefixeOrganeExamen` = « AN »), même numéro hors préfixe, `cycleDeVie.dateSort` le jour du scrutin, correspondance unique. Vérifié sur l'amendement n° 2686 du Gouvernement (article 45 bis du PLFSS 2026, scrutin du 2025-11-12).
+- 17e législature : archive téléchargée le 2026-10-25 (346,8 Mo, 142 200 amendements).
+- 16e législature : archive inaccessible depuis le 2026-10-21. Le téléchargement s'arrête toujours avant la fin (au mieux 70,6 Mo sur 363), y compris dans un navigateur ; au-delà, le serveur répond 206 sans contenu. Signalé à opendata@assemblee-nationale.fr. Le fichier partiel est conservé avec son ETag : le téléchargement reprendra là où il s'est arrêté.
 
 ## Sénat
 
