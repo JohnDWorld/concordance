@@ -58,7 +58,7 @@ Les programmes disent une chose, les réseaux sociaux en disent une autre. Les v
 - **Traitements** : Python 3.12, géré avec `uv`
 - **Base** : Postgres 17 + pgvector dans un conteneur dédié (`docker-compose.yml`), recherche plein texte en français, migrations gérées avec le CLI Supabase. Jamais partagée avec un autre projet
 - **IA locale** : Ollama
-  - embeddings multilingues (ex. `bge-m3`)
+  - embeddings multilingues (`qwen3-embedding:0.6b`, docs/methodologie.md)
   - deux juges de familles différentes, dimensionnés pour 24 Go de VRAM (ex. un Qwen et un Mistral quantifiés), choix final après évaluation
 - **Sortie** : site statique généré, aucun tracking
 
@@ -130,12 +130,16 @@ set -a; . ./.env; set +a
 PGSSLMODE=disable supabase db push --db-url "$DATABASE_URL"   # migrations (CLI Supabase)
 uv sync
 uv run python -m concordance.ingest.an --legislatures 16 17
+uv run python -m concordance.ingest.senat --depuis 2022
+uv run python -m concordance.ingest.pe
+uv run python -m concordance.ingest.an_explications --legislatures 16 17
+uv run python -m concordance.ingest.an_amendements --legislature 17
 uv run python -m concordance.ingest.programmes   # donnees/ : citations vérifiées sur leurs sources
 uv run python -m concordance.pipeline.embed
 # juges locaux (llama.cpp, API compatible OpenAI) : LLM_URL (qwen3-30b-a3b), JUGE2_URL (llama3.2), voir ci-dessous
 uv run python -m concordance.pipeline.judge --juge qwen3-30b-a3b
 uv run python -m concordance.pipeline.judge --juge llama3.2
-uv run python -m concordance.eval.run            # accord avec eval/gold_retraites.csv -> docs/evaluation/juges.md
+uv run python -m concordance.eval.run --juger qwen3-30b-a3b   # puis sans option : accord avec eval/gold_retraites.csv -> docs/evaluation/juges_<consigne>.md
 uv run python -m concordance.eval.bias           # test contrefactuel -> docs/evaluation/biais.md
 uv run python -m concordance.publish.fiche       # fiches HTML -> site/
 ```

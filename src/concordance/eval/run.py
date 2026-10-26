@@ -2,7 +2,8 @@
 
 --echantillon N : tire N paires parmi celles à juger, équilibrées entre groupes, et écrit le fichier à annoter
 (colonnes relation et justification vides) avec, à côté, le contexte anonymisé de chaque paire pour l'annotation.
-Sans option : accord de chaque juge avec l'annotation, kappa entre les deux juges, rapport docs/evaluation/juges.md.
+--juger JUGE : fait juger les paires de référence. Sans option : accord de chaque juge avec l'annotation, kappa entre
+les deux juges, rapport docs/evaluation/juges_<consigne>.md.
 """
 
 import argparse
@@ -55,7 +56,9 @@ def kappa(a: list[str], b: list[str]) -> float | None:
     return 1.0 if expected == 1 else (observed - expected) / (1 - expected)
 
 
-def write_sample(n: int, limit: int, contexts: Path) -> None:
+def write_sample(n: int, limit: int, contexts: Path, overwrite: bool) -> None:
+    if GOLD.exists() and any(r["relation"] for r in csv.DictReader(GOLD.open(encoding="utf-8"))) and not overwrite:
+        raise SystemExit(f"{GOLD} contient déjà des annotations : --ecraser pour le remplacer")
     with db.connect() as conn:
         dictionary = build_dictionary(conn)
         chosen = balanced(pairs(conn, limit), n)
@@ -70,8 +73,10 @@ def write_sample(n: int, limit: int, contexts: Path) -> None:
             rows.append({"mesure_cle": cle, "candidat": candidat, "chambre": chambre, "scrutin": scrutin, "intitule": intitule[:160],
                          "groupe": groupe, "sigle": sigle, "relation": "", "nature_du_vote": "", "justification": "", "annotation": ""})
             # Annotation à l'aveugle : même anonymisation que le juge, avec la fin du débat pour comprendre le texte voté.
+            # ponytail: le débat est anonymisé à part, les autres groupes peuvent y recevoir d'autres lettres que dans
+            # le message (seule celle du groupe jugé coïncide) ; un seul appel à anonymize si l'on réannote.
             rng = random.Random(f"annotation-{i}")
-            message, mapping = render(p, dictionary, rng)
+            message, _, mapping = render(p, dictionary, rng)
             [context], _ = anonymize([(debat or "")[-CONTEXT_MAX:].translate(TYPOGRAPHY)], p.group_id, dictionary,
                                      random.Random(f"annotation-{i}"))
             label = next(lab for lab, ids in mapping.items() if ids == [p.group_id])
@@ -156,7 +161,8 @@ def evaluate() -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--echantillon", type=int, help="tirer N paires à annoter")
-    parser.add_argument("--limite", type=int, default=5, help="scrutins par mesure (comme le juge)")
+    parser.add_argument("--limite", type=int, default=2, help="scrutins par mesure parmi lesquels tirer l'échantillon")
+    parser.add_argument("--ecraser", action="store_true", help="remplacer un jeu de référence déjà annoté")
     parser.add_argument("--contextes", type=Path, help="fichier JSONL des contextes anonymisés à annoter")
     parser.add_argument("--juger", choices=JUDGES, help="faire d'abord juger les paires de référence par ce juge")
     parser.add_argument("--paralleles", type=int, default=1, help="requêtes envoyées en même temps au juge")
@@ -164,7 +170,7 @@ def main() -> None:
     if args.juger:
         judge_reference(args.juger, args.paralleles)
     if args.echantillon:
-        write_sample(args.echantillon, args.limite, args.contextes or Path("eval/gold_contextes.jsonl"))
+        write_sample(args.echantillon, args.limite, args.contextes or Path("eval/gold_contextes.jsonl"), args.ecraser)
         return
     report = evaluate()
     REPORT.parent.mkdir(parents=True, exist_ok=True)

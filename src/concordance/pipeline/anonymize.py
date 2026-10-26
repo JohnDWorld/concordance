@@ -14,6 +14,7 @@ import unicodedata
 import zipfile
 from collections.abc import Iterable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import psycopg
@@ -25,7 +26,7 @@ PERSON, PARTY, TERM = "[personne]", "[parti]", "[terme partisan]"
 LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 CIVILITY = r"(?:M\.|Mme|Mmes|MM\.|Monsieur|Madame)(?:\s+(?:le|la)\s+(?:député|députée|sénateur|sénatrice|ministre|président|présidente|rapporteur|rapporteure|Premier ministre))?"
 # Mots qui, devant un nom de famille, désignent une personne (« loi Duplomb », « gouvernement Barnier »).
-BEFORE_NAME = r"(?:loi|lois|réforme|gouvernement|ministre|Premier ministre|présidente?|collègues?|amendement|rapport|plan|mission)"
+BEFORE_NAME = r"(?i:loi|lois|réforme|gouvernement|ministre|Premier ministre|présidente?|collègues?|amendement|rapport|plan|mission|famille)"
 # Personnalités politiques absentes des données parlementaires (présidents de la République, anciens dirigeants).
 OUTSIDE_DATA = ("Emmanuel Macron", "François Hollande", "Nicolas Sarkozy", "Jean-Marie Le Pen")
 # Désignations d'un camp qui ne sont ni un nom de groupe ni un nom de parti des données.
@@ -35,6 +36,11 @@ PARTISAN_TERMS = ("insoumis", "insoumise", "insoumises", "lepéniste", "lepénis
                   # anciens noms de partis et désignations familières d'un camp
                   "Front national", "UMP", "En Marche", "La République en marche", "LREM", "LaREM",
                   "écolos", "socialos", "socialistes", "communistes", "écologistes")
+# Mots formés sur un nom de personne : « Macronie », « macronisme », « mélenchoniste ».
+DERIVED = r"(?:ie|isme|ismes|iste|istes|sme|ste|stes|ien|iens|ienne|iennes)"
+# Mots courants du français (paquet wfrench) : un nom de famille qui en est un (« Petit », « Blanc ») n'est masqué
+# seul qu'après une civilité ou un mot qui désigne une personne ; les autres (« Macron ») le sont partout.
+COMMON_WORDS = Path("/usr/share/dict/french")
 
 
 def variants(name: str) -> set[str]:
@@ -85,14 +91,24 @@ class Dictionary:
     terms: re.Pattern[str]
 
 
+def ordinary(surname: str, common_words: set[str]) -> bool:
+    """Nom de famille dont chaque mot est un mot courant (« Petit », « Le Maire ») : il n'est pas masqué seul partout."""
+    return all(w.lower() in common_words for w in re.split(r"[\s'’-]+", surname) if w)
+
+
 def compile_dictionary(full_names: Iterable[str], surnames: Iterable[str], groups: Iterable[tuple[str, int]],
-                       parties: Iterable[str]) -> Dictionary:
+                       parties: Iterable[str], common_words: Iterable[str] = ()) -> Dictionary:
+    names = {*surnames, *(n.split(" ", 1)[1] for n in OUTSIDE_DATA)}
     full = alternation(v for n in (*full_names, *OUTSIDE_DATA) for v in variants(n))
-    last = alternation(v for n in (*surnames, *(n.split(" ", 1)[1] for n in OUTSIDE_DATA)) for v in variants(n))
+    last = alternation(v for n in names for v in variants(n))
+    common = set(common_words)
+    bare = sorted(n for n in names if len(n) >= 3 and not ordinary(n, common))
     # Après une civilité, le nom complet d'abord : « M. Bertrand Pancher », pas « M. Bertrand » + « Pancher ».
-    # Un nom seul n'est masqué qu'après une civilité ou un mot qui désigne une personne (« loi Duplomb »),
-    # avec sa majuscule : « Petit » ou « Blanc » restent des mots ordinaires ailleurs.
-    persons = re.compile(rf"\b(?:(?i:{CIVILITY})\s+(?i:{full}|{last})|(?i:{full})|(?P<ctx>{BEFORE_NAME}\s+)(?:{last}))\b")
+    # Un nom seul est masqué avec sa majuscule partout s'il n'est pas un mot courant ; sinon seulement après une
+    # civilité ou un mot qui désigne une personne (« loi Duplomb ») : « Petit » ou « Blanc » restent des mots ailleurs.
+    persons = re.compile(rf"\b(?:(?i:{CIVILITY})\s+(?i:{full}|{last})|(?i:{full})|(?P<ctx>{BEFORE_NAME}\s+)(?:{last})"
+                         rf"|{alternation(n for b in bare for n in {b, re.sub(r'\s*-\s*', '-', b)})})\b")
+    derived = alternation(re.sub(r"[\s'’-]+", "", b).lower() for b in bare)
     by_name: dict[str, set[int]] = {}
     for name, group_id in groups:
         for v in variants(name):
@@ -106,7 +122,9 @@ def compile_dictionary(full_names: Iterable[str], surnames: Iterable[str], group
         persons=persons,
         groups=group_patterns,
         parties=re.compile(rf"(?<![\w-])(?:{alternation(party_names)})(?![\w-])") if party_names else re.compile(r"(?!)"),
-        terms=re.compile(rf"(?<![\w-])(?:{alternation(v for t in PARTISAN_TERMS for v in variants(t))})(?![\w-])", re.IGNORECASE),
+        # Après un trait d'union aussi : « socialo-macronisme ».
+        terms=re.compile(rf"(?<!\w)(?:{alternation(v for t in PARTISAN_TERMS for v in variants(t))}"
+                         rf"{f'|(?:{derived}){DERIVED}' if derived else ''})(?![\w-])", re.IGNORECASE),
     )
 
 
@@ -170,4 +188,4 @@ def build_dictionary(conn: psycopg.Connection[Any]) -> Dictionary:
     parties = [p for (p,) in conn.execute("select distinct party from concordance.candidates where party is not null")]
     parties += [r["label"] for path in sorted((RAW / "pe").glob("*/national_parties.csv.gz"))[-1:]
                 for r in csv.DictReader(gzip.open(path, "rt", encoding="utf-8")) if r["country_code"] == "FRA"]
-    return compile_dictionary(full_names, surnames, groups, parties)
+    return compile_dictionary(full_names, surnames, groups, parties, COMMON_WORDS.read_text(encoding="utf-8").split())

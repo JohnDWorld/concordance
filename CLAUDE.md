@@ -31,6 +31,7 @@ Sortie JSON stricte, validée par Pydantic :
 
 ```json
 {
+  "effet_du_texte": "rapproche | eloigne | ambigu | hors_sujet",
   "relation": "dans_le_sens | contraire | ambigu | hors_sujet",
   "nature_du_vote": "texte_entier | article | amendement | motion | autre",
   "justification": "80 mots maximum, factuelle, sans adjectif de jugement",
@@ -42,6 +43,7 @@ Sortie JSON stricte, validée par Pydantic :
 ```
 
 Règles du prompt :
+- `effet_du_texte` d'abord (depuis `judge_v2`) : la relation doit en découler avec le vote du groupe (voter pour un texte qui rapproche, ou contre un texte qui éloigne, va dans le sens de la mesure), sinon le jugement est rejeté.
 - `ambigu` dès que le texte voté mélange plusieurs sujets ou que le vote porte sur le gouvernement plutôt que sur le fond (motion de censure, motion de rejet).
 - Abstention et non-vote : décrire, ne pas interpréter.
 - Prompts versionnés dans `prompts/` (`judge_v1.md`, `judge_v2.md`...). Ne jamais modifier une version publiée, en créer une nouvelle. La version est stockée avec chaque jugement.

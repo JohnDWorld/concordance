@@ -19,7 +19,7 @@ def verdict(**over: object) -> str:
 
 
 def test_render_sends_only_anonymized_text() -> None:
-    message, mapping = render(PAIR, DICTIONARY, random.Random(0))
+    message, _, mapping = render(PAIR, DICTIONARY, random.Random(0))
     judged = next(lab for lab, ids in mapping.items() if ids == [1])
     other = next(lab for lab, ids in mapping.items() if ids == [2])
     assert "Panot" not in message and "Horizons" not in message and "LIOT" not in message
@@ -29,24 +29,27 @@ def test_render_sends_only_anonymized_text() -> None:
 
 
 def test_missing_explanation_is_stated() -> None:
-    message, mapping = render(PAIR.model_copy(update={"explication": None}), DICTIONARY, random.Random(0))
-    assert f"Aucune explication de vote disponible pour le {next(iter(mapping))}." in message
+    message, sources, mapping = render(PAIR.model_copy(update={"explication": None}), DICTIONARY, random.Random(0))
+    placeholder = f"Aucune explication de vote disponible pour le {next(iter(mapping))}."
+    assert placeholder in message
+    _, rejet = check(verdict(citations=[{"source": "explication", "extrait": placeholder}]), sources, PAIR)
+    assert rejet  # phrase du gabarit, pas un texte source
 
 
 def test_citations_must_match_the_text_sent() -> None:
-    message, _ = render(PAIR, DICTIONARY, random.Random(0))
-    assert check(verdict(), message, PAIR)[1] is None
-    _, rejet = check(verdict(citations=[{"source": "explication", "extrait": "Horizons et apparentés"}]), message, PAIR)
+    _, sources, _ = render(PAIR, DICTIONARY, random.Random(0))
+    assert check(verdict(), sources, PAIR)[1] is None
+    _, rejet = check(verdict(citations=[{"source": "explication", "extrait": "Horizons et apparentés"}]), sources, PAIR)
     assert rejet and rejet.startswith("citation introuvable")  # vrai nom absent du texte anonymisé
-    _, rejet = check(verdict(citations=[{"source": "mesure", "extrait": "Retraite à 61 ans"}]), message, PAIR)
+    _, rejet = check(verdict(citations=[{"source": "mesure", "extrait": "Retraite à 61 ans"}]), sources, PAIR)
     assert rejet  # un mot changé suffit
 
 
 def test_contract_violations_are_rejected() -> None:
-    message, _ = render(PAIR, DICTIONARY, random.Random(0))
+    _, sources, _ = render(PAIR, DICTIONARY, random.Random(0))
     for bad in (verdict(citations=[]), verdict(relation="favorable"), verdict(confiance=2),
                 verdict(justification="mot " * 81), "pas du JSON"):
-        v, rejet = check(bad, message, PAIR)
+        v, rejet = check(bad, sources, PAIR)
         assert v is None and rejet and rejet.startswith("réponse hors contrat")
 
 
@@ -59,12 +62,12 @@ def test_published_verdict_needs_both_judges_or_a_review() -> None:
 
 
 def test_relation_must_follow_effect_and_vote() -> None:
-    message, _ = render(PAIR, DICTIONARY, random.Random(0))
+    _, sources, _ = render(PAIR, DICTIONARY, random.Random(0))
     against = PAIR.model_copy(update={"pour": 0, "contre": 5, "majorite": "contre"})
     assert expected("eloigne", against) == "dans_le_sens"  # voter contre un texte qui éloigne de la mesure
     assert expected("rapproche", against) == "contraire"
     assert expected("rapproche", PAIR.model_copy(update={"pour": 2, "contre": 1, "abstention": 1})) == "ambigu"  # partagé
     assert expected("hors_sujet", PAIR) == "hors_sujet"
-    _, rejet = check(verdict(effet_du_texte="eloigne", relation="contraire"), message, against)
+    _, rejet = check(verdict(effet_du_texte="eloigne", relation="contraire"), sources, against)
     assert rejet and rejet.startswith("relation incohérente")
-    assert check(verdict(effet_du_texte="eloigne", relation="dans_le_sens"), message, against)[1] is None
+    assert check(verdict(effet_du_texte="eloigne", relation="dans_le_sens"), sources, against)[1] is None

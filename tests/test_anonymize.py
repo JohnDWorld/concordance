@@ -8,6 +8,7 @@ DICTIONARY = compile_dictionary(
     groups=[("Horizons et apparentés", 1), ("HOR", 1), ("La France insoumise - Nouvelle Union Populaire écologique et sociale", 2),
             ("LFI - NUPES", 2), ("Non inscrit", 3), ("NI", 3), ("Ecolo - NUPES", 4), ("LIOT", 5), ("LIOT", 6), ("À Droite", 7), ("Droite Républicaine", 8)],
     parties=["Rassemblement national", "Horizons et apparentés"],
+    common_words=["petit", "blanc", "le", "maire"],
 )
 
 
@@ -49,11 +50,11 @@ def test_shared_name_takes_judged_label() -> None:
 
 def test_names_in_context_and_group_variants() -> None:
     text = ("La loi Pancher, votée sous le gouvernement Bertrand, et M. le député Marcangeli : les écolos "
-            "et les Horizons et Apparentés en parlent ; un petit Bertrand de village reste un mot.")
+            "et les Horizons et Apparentés en parlent ; un petit village reste un mot.")
     [out], mapping = anonymize([text], 1, DICTIONARY, random.Random(0))
     judged = next(lab for lab, g in mapping.items() if g == [1])
     assert out == (f"La loi {PERSON}, votée sous le gouvernement {PERSON}, et {PERSON} : les {TERM} "
-                   f"et les {judged} en parlent ; un petit Bertrand de village reste un mot.")
+                   f"et les {judged} en parlent ; un petit village reste un mot.")
 
 
 def test_short_group_names_do_not_swallow_common_words() -> None:
@@ -61,3 +62,15 @@ def test_short_group_names_do_not_swallow_common_words() -> None:
     [out], mapping = anonymize([text], 8, DICTIONARY, random.Random(0))
     dr, ad = (next(lab for lab, g in mapping.items() if g == [i]) for i in (8, 7))
     assert out == f"Le {dr}, assis à droite, et le {ad}."
+
+
+def test_bare_surnames_and_derived_words() -> None:
+    """Un nom de famille qui n'est pas un mot courant est masqué seul ; un mot courant (« Petit ») ne l'est pas."""
+    dictionary = compile_dictionary(full_names=["Jean Dupontel", "Marine Le Pen", "Paul Petit"],
+                                    surnames=["Dupontel", "Le Pen", "Petit", "Le Maire"], groups=[], parties=[],
+                                    common_words=["petit", "le", "maire"])
+    text = ("La famille Le Pen, la Dupontelie et le socialo-dupontelisme ; Sous Dupontel, le Petit Prince "
+            "et le maire de la commune.")
+    [out], _ = anonymize([text], 1, dictionary, random.Random(0))
+    assert out == (f"La famille {PERSON}, la {TERM} et le socialo-{TERM} ; Sous {PERSON}, le Petit Prince "
+                   "et le maire de la commune.")

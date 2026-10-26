@@ -10,7 +10,7 @@ from typing import Any
 from concordance import db
 from concordance.ingest.raw import download
 from concordance.models import Ballot, GroupPosition, ParlGroup
-from concordance.rules import Membership, nature
+from concordance.rules import Membership, majority, nature
 
 BASE = "https://data.assemblee-nationale.fr/static/openData/repository"
 SCRUTINS = BASE + "/{leg}/loi/scrutins/Scrutins.json.zip"
@@ -37,7 +37,6 @@ def parse_ballot(s: dict[str, Any]) -> Ballot:
     positions = []
     for g in s["ventilationVotes"]["organe"]["groupes"]["groupe"]:
         v = g["vote"]["decompteVoix"]
-        expressed = int(v["pour"]) + int(v["contre"]) + int(v["abstentions"])
         positions.append(GroupPosition(
             group_external_id=g["organeRef"],
             membres=g["nombreMembresGroupe"],
@@ -46,9 +45,9 @@ def parse_ballot(s: dict[str, Any]) -> Ballot:
             abstention=v["abstentions"],
             non_votants=v["nonVotants"],
             non_votants_volontaires=v.get("nonVotantsVolontaires"),
-            # La source renseigne une position même sans aucun vote exprimé (motion de censure : seuls
-            # les « pour » sont décomptés). Rapporter ce champ ferait dire au groupe ce qu'il n'a pas voté.
-            position_majoritaire=g["vote"]["positionMajoritaire"] if expressed else None,
+            # Calculée sur les chiffres, comme au Sénat et au Parlement européen : le champ positionMajoritaire de la
+            # source les contredit souvent (2 pour, 16 contre, « pour ») et en donne une sans vote exprimé.
+            position_majoritaire=majority(int(v["pour"]), int(v["contre"]), int(v["abstentions"])),
         ))
     objet = s["objet"]["libelle"]
     return Ballot(

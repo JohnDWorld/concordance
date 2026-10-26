@@ -89,27 +89,29 @@ def expected(effect: str, pair: Pair) -> str:
     return "dans_le_sens" if (effect == "rapproche") == (pair.majorite == "pour") else "contraire"
 
 
-def render(pair: Pair, dictionary: Dictionary, rng: random.Random) -> tuple[str, dict[str, list[int]]]:
-    """Message anonymisé envoyé au juge et correspondance des étiquettes."""
+def render(pair: Pair, dictionary: Dictionary, rng: random.Random) -> tuple[str, str, dict[str, list[int]]]:
+    """Message anonymisé envoyé au juge, textes sources qu'il contient (sans titres ni phrases du gabarit, contre
+    lesquels les citations sont vérifiées) et correspondance des étiquettes."""
     texts = [t.translate(TYPOGRAPHY) for t in (pair.mesure, pair.scrutin, pair.explication or "")]
     texts, mapping = anonymize(texts, pair.group_id, dictionary, rng)
     label = next(lab for lab, ids in mapping.items() if ids == [pair.group_id])
     mesure, scrutin, explication = texts
-    message = MESSAGE.format(mesure=mesure, scrutin=scrutin, groupe=label, position=f"{label} : {pair.position}",
+    position = f"{label} : {pair.position}"
+    message = MESSAGE.format(mesure=mesure, scrutin=scrutin, groupe=label, position=position,
                              explication=explication or f"Aucune explication de vote disponible pour le {label}.")
-    return message, mapping
+    return message, "\n".join((mesure, scrutin, position, explication)), mapping
 
 
-def check(raw: str, message: str, pair: Pair) -> tuple[Verdict | None, str | None]:
-    """Verdict validé et motif de rejet : réponse hors contrat, citation absente du texte envoyé au juge, ou relation qui
-    ne découle pas de l'effet du texte et du vote. La section indiquée par « source » n'est pas contrôlée : seule compte
-    la présence mot pour mot (CLAUDE.md, règle 4)."""
+def check(raw: str, sources: str, pair: Pair) -> tuple[Verdict | None, str | None]:
+    """Verdict validé et motif de rejet : réponse hors contrat, citation absente des textes envoyés au juge, ou relation
+    qui ne découle pas de l'effet du texte et du vote. La section indiquée par « source » n'est pas contrôlée : seule
+    compte la présence mot pour mot (CLAUDE.md, règle 4)."""
     try:
         verdict = Verdict.model_validate_json(raw)
     except ValidationError as e:
         return None, f"réponse hors contrat : {e.errors()[0]['msg']} ({raw[:300]})"
     for c in verdict.citations:
-        if c.extrait not in message:
+        if c.extrait not in sources:
             return verdict, f"citation introuvable dans le texte envoyé : {c.extrait[:300]}"
     if verdict.relation != (want := expected(verdict.effet_du_texte, pair)):
         return verdict, f"relation incohérente : effet « {verdict.effet_du_texte} » et vote du groupe donnent « {want} »"
@@ -133,8 +135,8 @@ def ask(judge: str, message: str) -> str:
 def judge_pair(judge: str, pair: Pair, dictionary: Dictionary, seed: str = "") -> dict[str, Any]:
     """Un jugement, prêt à être inséré dans concordance.judgments. Étiquettes tirées par paire, juge et graine."""
     rng = random.Random(f"{pair.measure_id}-{pair.ballot_id}-{pair.group_id}-{judge}{seed}")
-    message, mapping = render(pair, dictionary, rng)
-    verdict, rejet = check(ask(judge, message), message, pair)
+    message, sources, mapping = render(pair, dictionary, rng)
+    verdict, rejet = check(ask(judge, message), sources, pair)
     fields = verdict.model_dump() if verdict else {}
     if verdict:
         fields["citations"] = Jsonb(fields["citations"])
@@ -160,7 +162,7 @@ def ballot_text(conn: psycopg.Connection[Any], ballot_id: int) -> str:
     lines = [f"{CHAMBERS[chamber]}{f', {leg}e législature' if leg else ''}, {day}.", f"Intitulé : {intitule}"]
     lines += [f"{label} : {v}" for label, v in (("Nature", nature), ("Objet", objet), ("Dossier", dossier),
                                                  ("Résultat", sort)) if v and v != intitule]
-    lines += [f"{label} : {v[:AMENDMENT_MAX]}" for label, v in (("Amendement voté, dispositif", dispositif),
+    lines += [f"{label} : {v[:AMENDMENT_MAX]}{' [texte tronqué]' if len(v) > AMENDMENT_MAX else ''}" for label, v in (("Amendement voté, dispositif", dispositif),
                                                                  ("Amendement voté, exposé sommaire", expose)) if v]
     return "\n".join(lines)
 
@@ -200,7 +202,7 @@ def pairs(conn: psycopg.Connection[Any], limit: int, measure: int | None = None)
 
 LATEST = """
 select distinct on (measure_id, ballot_id, group_id, model) measure_id, ballot_id, group_id, model, relation, rejet,
-       justification, mapping_anonymisation
+       justification, mapping_anonymisation, texte_anonymise
 from concordance.judgments where prompt_version = %s
 order by measure_id, ballot_id, group_id, model, id desc
 """
@@ -209,9 +211,9 @@ order by measure_id, ballot_id, group_id, model, id desc
 def verdicts(conn: psycopg.Connection[Any]) -> dict[tuple[int, int, int], dict[str, Any]]:
     """Dernier jugement de chaque juge par paire, et verdict publié : relecture humaine, sinon accord des deux juges."""
     out: dict[tuple[int, int, int], dict[str, Any]] = {}
-    for m, b, g, model, relation, rejet, justification, mapping in conn.execute(LATEST, (PROMPT_VERSION,)):
+    for m, b, g, model, relation, rejet, justification, mapping, sent in conn.execute(LATEST, (PROMPT_VERSION,)):
         out.setdefault((m, b, g), {"juges": {}})["juges"][model] = {
-            "relation": relation, "rejet": rejet, "justification": justification, "mapping": mapping}
+            "relation": relation, "rejet": rejet, "justification": justification, "mapping": mapping, "texte": sent}
     reviews = {(m, b, g): (r, j) for m, b, g, r, j in conn.execute(
         "select measure_id, ballot_id, group_id, relation, justification from concordance.reviews")}
     for key, v in out.items():
