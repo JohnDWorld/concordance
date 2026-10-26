@@ -58,7 +58,7 @@ Les programmes disent une chose, les réseaux sociaux en disent une autre. Les v
 - **Traitements** : Python 3.12, géré avec `uv`
 - **Base** : Postgres 17 + pgvector dans un conteneur dédié (`docker-compose.yml`), recherche plein texte en français, migrations gérées avec le CLI Supabase. Jamais partagée avec un autre projet
 - **IA locale** : Ollama
-  - embeddings multilingues (ex. `bge-m3`)
+  - embeddings multilingues (`qwen3-embedding:0.6b`, docs/methodologie.md)
   - deux juges de familles différentes, dimensionnés pour 24 Go de VRAM (ex. un Qwen et un Mistral quantifiés), choix final après évaluation
 - **Sortie** : site statique généré, aucun tracking
 
@@ -130,9 +130,27 @@ set -a; . ./.env; set +a
 PGSSLMODE=disable supabase db push --db-url "$DATABASE_URL"   # migrations (CLI Supabase)
 uv sync
 uv run python -m concordance.ingest.an --legislatures 16 17
+uv run python -m concordance.ingest.senat --depuis 2022
+uv run python -m concordance.ingest.pe
+uv run python -m concordance.ingest.an_explications --legislatures 16 17
+uv run python -m concordance.ingest.an_amendements --legislature 17
 uv run python -m concordance.ingest.programmes   # donnees/ : citations vérifiées sur leurs sources
-uv run python -m concordance.pipeline.run --theme retraites
-uv run python -m concordance.eval.run --gold eval/gold_retraites.csv
+uv run python -m concordance.pipeline.embed
+# juges locaux (llama.cpp, API compatible OpenAI) : LLM_URL (qwen3-30b-a3b), JUGE2_URL (llama3.2), voir ci-dessous
+uv run python -m concordance.pipeline.judge --juge qwen3-30b-a3b
+uv run python -m concordance.pipeline.judge --juge llama3.2
+uv run python -m concordance.eval.run --juger qwen3-30b-a3b   # puis sans option : accord avec eval/gold_retraites.csv -> docs/evaluation/juges_<consigne>.md
+uv run python -m concordance.eval.bias           # test contrefactuel -> docs/evaluation/biais.md
+uv run python -m concordance.publish.fiche       # fiches HTML -> site/
+```
+
+Second juge, servi depuis le fichier GGUF du modèle `llama3.2` déjà présent dans Ollama (aucun téléchargement), conteneur réservé à Concordance :
+
+```bash
+docker run -d --name concordance-juge2 --gpus all -p 127.0.0.1:8013:8013 \
+  -v /usr/share/ollama/.ollama/models/blobs/sha256-dde5aa3fc5ffc17176b5e8bdc82f587b24b2678c6c66101bf7da77af9f7ccdff:/models/llama3.2.gguf:ro \
+  ghcr.io/ggml-org/llama.cpp:server-cuda -m /models/llama3.2.gguf --alias llama3.2 \
+  -c 12288 --parallel 1 -fa on -ctk q4_0 -ctv q4_0 --jinja --host 0.0.0.0 --port 8013
 ```
 
 *(Commandes cibles, à créer lors de la première session.)* Base et tâches planifiées sont dédiées à Concordance : projet public, une fuite ne doit exposer que ses propres données.

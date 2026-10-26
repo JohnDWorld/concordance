@@ -19,6 +19,7 @@ Vérifié le 2026-10-20. Tout ce qui n'a pas pu être confirmé sur la source es
 - Positions par groupe : `ventilationVotes.organe.groupes.groupe[]` avec `organeRef`, `nombreMembresGroupe`, `vote.positionMajoritaire`, `vote.decompteVoix` (`pour`, `contre`, `abstentions`, `nonVotants`, `nonVotantsVolontaires`), `vote.decompteNominatif` (`votant[]` : `acteurRef`, `mandatRef`, `causePositionVote`, `parDelegation`).
 - Page publique : `https://www.assemblee-nationale.fr/dyn/{législature}/scrutins/{numéro}`, par exemple https://www.assemblee-nationale.fr/dyn/16/scrutins/1240.
 - Exemple lu : `VTANR5L16V1240` et `VTANR5L16V1241`, motions de censure du 2023-03-20 sur la réforme des retraites, rejetées (278 et 94 voix pour, 287 requises).
+- `nonVotantsVolontaires` (`decompteVoix`) : dans les fichiers sources, ce champ est égal à `abstentions` pour chaque groupe et chaque scrutin (vérifié le 2026-10-26 : 45 175 lignes de la 16e législature, 106 872 de la 17e). Le chargement est fidèle à la source ; la fiche le signale. Sa définition n'est pas confirmée : TODO: vérifier (documentation de l'open data ou question à l'Assemblée).
 - `positionMajoritaire` est renseigné même pour un groupe qui n'a exprimé aucun vote (motion de censure : « pour » à 0 voix). Il n'est pas repris dans ce cas (voir `methodologie.md`).
 - Défaut de la source : 146 positions de la 17e législature ont `organeRef` = `PO0` (groupe non identifié), dans 14 scrutins : n° 489 à 501 (2024-12-02, tous les groupes), 1302 et 6256 (un groupe chacun). Ces positions ne sont pas chargées, les scrutins le sont. Le groupe pourrait être retrouvé via les votants (`decompteNominatif`) : `TODO: vérifier` si nécessaire.
 - Le scrutin du Congrès (16e, n° 1, 2024-03-04, `codeTypeVote` = `SSG`) contient les groupes du Sénat : non chargé.
@@ -30,6 +31,7 @@ Vérifié le 2026-10-20. Tout ce qui n'a pas pu être confirmé sur la source es
 - AMO30 (historique de toutes les législatures) : https://data.assemblee-nationale.fr/static/openData/repository/17/amo/tous_acteurs_mandats_organes_xi_legislature/AMO30_tous_acteurs_tous_mandats_tous_organes_historique.json.zip (13,7 Mo).
 - Champs d'un organe : `uid`, `codeType` (`GP` pour un groupe politique), `libelle`, `libelleAbrev`, `viMoDe.dateDebut` / `dateFin`, `legislature`.
 - Jointure vérifiée : `organeRef` d'un groupe dans un scrutin = `uid` de l'organe dans AMO. Uid et libellés changent d'une législature à l'autre.
+- Lien candidat-groupe (fiches) : dans AMO30, Jean-Luc Mélenchon (PA2150) n'a de mandat de groupe qu'à la 15e législature (se termine le 2022-06-21), alors que ses scrutins liés datent de 2023 à 2025. La fiche ne conclut donc pas à une absence de groupe : elle écrit que les données ne font pas apparaître de groupe. TODO: vérifier sur assemblee-nationale.fr la composition de la 17e législature. Même contrôle pour les autres candidats sans lien établi (Lisnard, Cazeneuve, Philippot, Branco, Arthaud). TODO: vérifier.
 
 ### Comptes rendus de séance (explications de vote)
 

@@ -45,3 +45,16 @@ def test_parse_group() -> None:
     assert g is not None and (g.sigle, g.legislature, g.end_date) == ("SOC", 16, date(2024, 6, 9))
     assert parse_group(organe, {17}) is None
     assert parse_group({**organe, "codeType": "COMPER"}, {16}) is None
+
+
+def test_majority_comes_from_the_figures() -> None:
+    """La position de la source contredit parfois ses chiffres (VTANR5L17V1819, SOC : 2 pour, 16 contre, « pour »)."""
+    group = {"organeRef": "PO845419", "nombreMembresGroupe": "66",
+             "vote": {"positionMajoritaire": "pour",
+                      "decompteVoix": {"nonVotants": "0", "pour": "2", "contre": "16", "abstentions": "0",
+                                       "nonVotantsVolontaires": "0"}}}
+    tie = {**group, "vote": {**group["vote"], "decompteVoix": {**group["vote"]["decompteVoix"], "contre": "2"}}}
+    scrutin = {**SCRUTIN, "ventilationVotes": {"organe": {"groupes": {"groupe": [group, tie]}}}}
+    contre, egalite = parse_ballot(scrutin).positions
+    assert contre.position_majoritaire == "contre"
+    assert egalite.position_majoritaire is None  # égalité en tête : pas de position, pas de jugement

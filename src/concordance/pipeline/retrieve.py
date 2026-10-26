@@ -35,22 +35,28 @@ select b.id from concordance.ballots b join concordance.amendments a on a.id = b
 where regexp_count(lower(concat_ws(' ', a.dispositif, a.expose_sommaire)), %(explications)s) >= 1
 """
 
-SEARCH = f"""
+SEARCH = """
 select b.id, b.chamber, b.ballot_date, b.external_id, b.intitule, b.source_url,
        1 - (b.embedding <=> m.embedding) as proximite
 from concordance.ballots b, concordance.measures m
-where m.id = %(measure)s and b.id in ({PERIMETER})
+where m.id = %(measure)s and b.id = any(%(ids)s)
 order by b.embedding <=> m.embedding limit %(limit)s
 """
 
 
 def perimeter_size(conn: psycopg.Connection[Any], theme: str) -> int:
-    row = conn.execute(f"select count(*) from ({PERIMETER}) p", THEMES[theme] | {"min": MIN_MENTIONS}).fetchone()
-    return int(row[0]) if row else 0
+    return len(perimeter(conn, theme))
 
 
-def search(conn: psycopg.Connection[Any], measure_id: int, theme: str, limit: int) -> list[tuple[Any, ...]]:
-    return conn.execute(SEARCH, THEMES[theme] | {"min": MIN_MENTIONS, "measure": measure_id, "limit": limit}).fetchall()
+def perimeter(conn: psycopg.Connection[Any], theme: str) -> list[int]:
+    return [i for (i,) in conn.execute(PERIMETER, THEMES[theme] | {"min": MIN_MENTIONS})]
+
+
+def search(conn: psycopg.Connection[Any], measure_id: int, theme: str, limit: int,
+           ids: list[int] | None = None) -> list[tuple[Any, ...]]:
+    """Scrutins du périmètre les plus proches de la mesure ; `ids` : périmètre déjà calculé (requête lente)."""
+    ids = perimeter(conn, theme) if ids is None else ids
+    return conn.execute(SEARCH, {"measure": measure_id, "limit": limit, "ids": ids}).fetchall()
 
 
 CHAMBERS = {"an": "Assemblée", "senat": "Sénat", "pe": "Parlement européen"}
