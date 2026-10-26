@@ -74,28 +74,27 @@ class Pair(BaseModel):
     explication: str | None
 
 
-def render(pair: Pair, dictionary: Dictionary, rng: random.Random) -> tuple[str, dict[str, str], dict[str, list[int]]]:
-    """Message anonymisé, sections telles qu'envoyées (pour vérifier les citations) et correspondance des étiquettes."""
+def render(pair: Pair, dictionary: Dictionary, rng: random.Random) -> tuple[str, dict[str, list[int]]]:
+    """Message anonymisé envoyé au juge et correspondance des étiquettes."""
     texts = [t.translate(TYPOGRAPHY) for t in (pair.mesure, pair.scrutin, pair.explication or "")]
     texts, mapping = anonymize(texts, pair.group_id, dictionary, rng)
     label = next(lab for lab, ids in mapping.items() if ids == [pair.group_id])
     mesure, scrutin, explication = texts
-    position = f"{label} : {pair.position}"
-    message = MESSAGE.format(mesure=mesure, scrutin=scrutin, groupe=label, position=position,
+    message = MESSAGE.format(mesure=mesure, scrutin=scrutin, groupe=label, position=f"{label} : {pair.position}",
                              explication=explication or f"Aucune explication de vote disponible pour le {label}.")
-    # La position du groupe fait partie du scrutin (contrat du juge) : une citation « scrutin » peut la reprendre.
-    return message, {"mesure": mesure, "scrutin": f"{scrutin}\n{position}", "explication": explication}, mapping
+    return message, mapping
 
 
-def check(raw: str, sections: dict[str, str]) -> tuple[Verdict | None, str | None]:
-    """Verdict validé et motif de rejet : réponse hors contrat, ou citation absente du texte envoyé."""
+def check(raw: str, message: str) -> tuple[Verdict | None, str | None]:
+    """Verdict validé et motif de rejet : réponse hors contrat, ou citation absente du texte envoyé au juge.
+    La section indiquée par « source » n'est pas contrôlée : seule compte la présence mot pour mot (CLAUDE.md, règle 4)."""
     try:
         verdict = Verdict.model_validate_json(raw)
     except ValidationError as e:
         return None, f"réponse hors contrat : {e.errors()[0]['msg']} ({raw[:300]})"
     for c in verdict.citations:
-        if c.extrait not in sections[c.source]:
-            return verdict, f"citation introuvable dans « {c.source} » : {c.extrait[:300]}"
+        if c.extrait not in message:
+            return verdict, f"citation introuvable dans le texte envoyé : {c.extrait[:300]}"
     return verdict, None
 
 
@@ -116,8 +115,8 @@ def ask(judge: str, message: str) -> str:
 def judge_pair(judge: str, pair: Pair, dictionary: Dictionary, seed: str = "") -> dict[str, Any]:
     """Un jugement, prêt à être inséré dans concordance.judgments. Étiquettes tirées par paire, juge et graine."""
     rng = random.Random(f"{pair.measure_id}-{pair.ballot_id}-{pair.group_id}-{judge}{seed}")
-    message, sections, mapping = render(pair, dictionary, rng)
-    verdict, rejet = check(ask(judge, message), sections)
+    message, mapping = render(pair, dictionary, rng)
+    verdict, rejet = check(ask(judge, message), message)
     fields = verdict.model_dump() if verdict else {}
     if verdict:
         fields["citations"] = Jsonb(fields["citations"])
@@ -230,8 +229,18 @@ def main() -> None:
         print(f"{len(todo)} paires à juger par {args.juge}", flush=True)
         # Plusieurs requêtes en file : le serveur les traite une à une, mais n'attend plus entre deux paires.
         with ThreadPoolExecutor(args.paralleles) as pool:
-            for i, row in enumerate(pool.map(lambda p: judge_pair(args.juge, p, dictionary), todo), 1):
-                save(conn, row, i, len(todo))
+            for i, row in enumerate(pool.map(lambda p: attempt(args.juge, p, dictionary), todo), 1):
+                if row:
+                    save(conn, row, i, len(todo))
+
+
+def attempt(judge: str, pair: Pair, dictionary: Dictionary) -> dict[str, Any] | None:
+    """Un serveur indisponible n'est pas un jugement : la paire n'est pas enregistrée et sera rejugée au passage suivant."""
+    try:
+        return judge_pair(judge, pair, dictionary)
+    except OSError as e:  # URLError, HTTPError, délai dépassé
+        print(f"paire {pair.measure_id}-{pair.ballot_id}-{pair.group_id} non jugée : {e}", flush=True)
+        return None
 
 
 def save(conn: psycopg.Connection[Any], row: dict[str, Any], i: int, total: int) -> None:
