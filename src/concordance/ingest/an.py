@@ -10,7 +10,7 @@ from typing import Any
 from concordance import db
 from concordance.ingest.raw import download
 from concordance.models import Ballot, GroupPosition, ParlGroup
-from concordance.rules import nature
+from concordance.rules import Membership, nature
 
 BASE = "https://data.assemblee-nationale.fr/static/openData/repository"
 SCRUTINS = BASE + "/{leg}/loi/scrutins/Scrutins.json.zip"
@@ -104,9 +104,9 @@ if __name__ == "__main__":
     main()
 
 
-def group_periods(zf: zipfile.ZipFile) -> dict[str, list[tuple[str, date | None, date | None]]]:
+def group_periods(zf: zipfile.ZipFile) -> dict[str, list[Membership]]:
     """Député vers ses mandats de groupe politique (AMO30) : (organe, début, fin)."""
-    out: dict[str, list[tuple[str, date | None, date | None]]] = {}
+    out: dict[str, list[Membership]] = {}
     for name in zf.namelist():
         if "/acteur/" not in name:
             continue

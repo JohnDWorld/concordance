@@ -16,8 +16,8 @@ from pathlib import Path
 from concordance import db
 from concordance.ingest.an import AMO30, BASE, SCRUTINS, group_periods
 from concordance.ingest.raw import RAW, download
-from concordance.ingest.senat import group_at  # déplacé dans rules.py par le lot 4c, import à mettre à jour
 from concordance.models import VoteExplanation
+from concordance.rules import Membership, group_at
 
 COMPTES_RENDUS = BASE + "/{leg}/vp/syceronbrut/syseron.xml.zip"  # la page affiche « /VP/ », qui renvoie 404
 # Sections du sommaire dont les orateurs prennent position avant un vote.
@@ -78,7 +78,7 @@ def match_ballot(result: str, candidates: list[tuple[str, int, int]]) -> str | N
     return found[0] if len(found) == 1 else None
 
 
-def parse_explanations(raw: str, ballots: Ballots, periods: dict[str, list[tuple[str, date | None, date | None]]]
+def parse_explanations(raw: str, ballots: Ballots, periods: dict[str, list[Membership]]
                        ) -> tuple[list[VoteExplanation], Counter[str]]:
     stats: Counter[str] = Counter()
     uid = re.search(r"<uid>(.*?)</uid>", raw)

@@ -13,31 +13,59 @@ from pathlib import Path
 
 RAW = Path("data/raw")
 MANIFEST = RAW / "manifest.jsonl"
-RETRY_DELAYS = (10, 30, 60, 120, 300)  # les serveurs de l'Assemblée répondent souvent 503
+RETRY_DELAYS = (10, 30, 60, 120, 300)  # les serveurs de l'Assemblée répondent souvent 503 ou coupent la connexion
 USER_AGENT = "Concordance (+https://github.com/JohnDWorld/concordance)"
+
+
+def fetch_into(url: str, part: Path) -> None:
+    """Complète `part` depuis l'octet déjà reçu. Lève OSError si le fichier reste incomplet.
+
+    La reprise envoie If-Range avec l'ETag du premier essai : si le fichier a changé sur le serveur entre-temps,
+    celui-ci renvoie le fichier entier (200) et on repart de zéro, sans jamais mélanger deux versions.
+    """
+    etag_file = part.with_name(part.name + ".etag")
+    done = part.stat().st_size if part.exists() and etag_file.exists() else 0
+    headers = {"User-Agent": USER_AGENT}
+    if done:
+        headers |= {"Range": f"bytes={done}-", "If-Range": etag_file.read_text()}
+    with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=120) as response:
+        resumed = response.status == 206
+        if not resumed:
+            etag = response.headers.get("ETag")
+            if etag:
+                etag_file.write_text(etag)
+            else:
+                etag_file.unlink(missing_ok=True)  # sans ETag, aucune reprise possible en toute sûreté
+        with part.open("ab" if resumed else "wb") as f:
+            shutil.copyfileobj(response, f)
+        expected = (response.headers.get("Content-Range") or "").rpartition("/")[2] if resumed else response.headers.get("Content-Length")
+    # Un serveur qui coupe la connexion peut laisser un fichier tronqué sans lever d'erreur.
+    if expected and part.stat().st_size != int(expected):
+        raise OSError(f"téléchargement tronqué : {part.stat().st_size} octets sur {expected}")
 
 
 def download(url: str, dest: Path) -> Path:
     path = RAW / dest
     part = path.with_name(path.name + ".part")
     path.parent.mkdir(parents=True, exist_ok=True)
-    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    for delay in (*RETRY_DELAYS, None):
+    stalled = 0
+    while True:
+        before = part.stat().st_size if part.exists() else 0
         try:
-            with urllib.request.urlopen(request, timeout=120) as response, part.open("wb") as f:
-                shutil.copyfileobj(response, f)
-                expected = response.headers.get("Content-Length")
-            # Un serveur qui coupe la connexion peut laisser un fichier tronqué sans lever d'erreur.
-            if expected is not None and part.stat().st_size != int(expected):
-                raise OSError(f"téléchargement tronqué : {part.stat().st_size} octets sur {expected}")
+            fetch_into(url, part)
             break
         except (OSError, http.client.HTTPException) as e:
-            client_error = isinstance(e, urllib.error.HTTPError) and e.code < 500
-            if delay is None or client_error:
+            if isinstance(e, urllib.error.HTTPError) and e.code < 500:
                 raise
-            print(f"{url} : {e}, nouvel essai dans {delay} s", file=sys.stderr)
+            progressed = part.exists() and part.stat().st_size > before
+            stalled = 0 if progressed else stalled + 1
+            if stalled >= len(RETRY_DELAYS):
+                raise
+            delay = 1 if progressed else RETRY_DELAYS[stalled]
+            print(f"{url} : {e}, reprise dans {delay} s", file=sys.stderr)
             time.sleep(delay)
     part.replace(path)
+    part.with_name(part.name + ".etag").unlink(missing_ok=True)
     with path.open("rb") as f:
         sha256 = hashlib.file_digest(f, "sha256").hexdigest()
     entry = {

@@ -13,7 +13,8 @@ import psycopg
 from concordance import db
 
 # Périmètre d'un thème : mots de l'intitulé ou du dossier (plein texte français, anglais pour le PE),
-# ou au moins MIN_MENTIONS mentions du thème dans les explications de vote, ou dans le débat qui précède le scrutin.
+# ou au moins MIN_MENTIONS mentions du thème dans les explications de vote, ou dans le débat qui précède le scrutin,
+# ou une mention dans l'amendement voté (texte court, d'un seul sujet).
 THEMES = {
     "retraites": {
         "titre": "retraite | pension | vieillesse | (âge <-> légal) | (âge <-> de <-> départ) | retirement | old-age",
@@ -29,6 +30,9 @@ select e.ballot_id from concordance.vote_explanations e
 group by e.ballot_id having sum(regexp_count(lower(e.texte), %(explications)s)) >= %(min)s
 union
 select b.id from concordance.ballots b where regexp_count(lower(b.debat), %(explications)s) >= %(min)s
+union
+select b.id from concordance.ballots b join concordance.amendments a on a.id = b.amendment_id
+where regexp_count(lower(concat_ws(' ', a.dispositif, a.expose_sommaire)), %(explications)s) >= 1
 """
 
 SEARCH = f"""
