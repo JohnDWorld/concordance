@@ -4,8 +4,8 @@ Consigne `judge_v2`. Jeu de référence : 120 paires (eval/gold_retraites.csv), 
 
 | Juge | Paires jugées | Rejetées | Accord avec l'annotation |
 |---|---|---|---|
-| `qwen3-30b-a3b` | 120 | 36 | 33/84 (39%) |
-| `llama3.2` | 120 | 86 | 4/34 (12%) |
+| `qwen3-30b-a3b` | 115 | 34 | 32/81 (40%) |
+| `llama3.2` | 115 | 82 | 4/33 (12%) |
 
 Kappa entre les deux juges : 0.10 sur 26 paires jugées par les deux.
 Verdict publié (accord des deux juges ou relecture) : 7 paires, dont 1 conformes à l'annotation (14%).
@@ -18,8 +18,8 @@ Verdict publié (accord des deux juges ou relecture) : 7 paires, dont 1 conforme
 |---|---|---|---|---|
 | dans_le_sens | 1 | 1 | 2 | 2 |
 | contraire | 1 | 3 | 1 | 1 |
-| ambigu | 13 | 6 | 12 | 16 |
-| hors_sujet | 2 | 5 | 1 | 17 |
+| ambigu | 13 | 6 | 12 | 14 |
+| hors_sujet | 2 | 5 | 1 | 16 |
 
 `llama3.2`
 
@@ -27,8 +27,8 @@ Verdict publié (accord des deux juges ou relecture) : 7 paires, dont 1 conforme
 |---|---|---|---|---|
 | dans_le_sens | 1 | 1 | 0 | 0 |
 | contraire | 0 | 3 | 0 | 0 |
-| ambigu | 3 | 16 | 0 | 5 |
-| hors_sujet | 2 | 3 | 0 | 0 |
+| ambigu | 2 | 17 | 0 | 5 |
+| hors_sujet | 1 | 3 | 0 | 0 |
 
 ## Accord par groupe
 
@@ -50,9 +50,9 @@ Un juge biaisé se tromperait plus souvent pour certains groupes.
 | LFI-NFP | 4 | 2/3 | - |
 | LIOT | 8 | 1/6 | - |
 | LR | 4 | 2/4 | - |
-| Les Indépendants | 3 | 1/3 | - |
+| Les Indépendants | 3 | 0/2 | - |
 | Les Républicains | 3 | 1/2 | 0/2 |
-| NI | 10 | 1/7 | 0/3 |
+| NI | 10 | 1/5 | 0/2 |
 | RDPI | 3 | 1/2 | - |
 | RDSE | 3 | 0/1 | 0/1 |
 | RE | 4 | 0/4 | - |
