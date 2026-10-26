@@ -77,6 +77,21 @@ Quand aucune explication de vote n'est disponible pour un groupe (pas d'interven
 
 Chaque citation du juge est vérifiée par correspondance exacte avec le texte qui lui a été envoyé, c'est-à-dire le texte anonymisé. Une citation introuvable entraîne le rejet du jugement. Les vrais noms ne sont rétablis qu'à la publication, à partir de la correspondance entre étiquettes et groupes conservée avec chaque jugement.
 
+## Jugement
+
+Le juge répond à une question : le vote d'un groupe sur un scrutin va-t-il dans le sens d'une mesure (`dans_le_sens`, `contraire`, `ambigu`, `hors_sujet`) ? La consigne versionnée est `prompts/judge_v1.md`, le code `src/concordance/pipeline/judge.py`.
+
+- **Paires jugées** : pour chaque mesure, les 5 scrutins les mieux classés par la recherche ; pour chacun, chaque groupe dont la position majoritaire est « pour » ou « contre ». Au Parlement européen, les délégations nationales françaises. Quand la position majoritaire est l'abstention, le non-vote ou un partage à égalité, aucun juge n'est appelé : la fiche décrit les chiffres sans interprétation.
+- **Ce que voit le juge** : la mesure (citation exacte), le scrutin (chambre, date, intitulé, nature, objet, dossier, résultat et, s'il est relié, le dispositif et l'exposé sommaire de l'amendement voté, 3 000 caractères au plus chacun), les chiffres du groupe et son explication de vote si elle existe. Tout passe par l'anonymiseur. Avant, apostrophes typographiques et espaces insécables sont remplacés par leurs équivalents simples, que les modèles recopient ; ce texte est celui envoyé et conservé, et c'est contre lui que les citations sont vérifiées. La position du groupe fait partie du scrutin : une citation « scrutin » peut la reprendre.
+- **Étiquettes** : tirées au hasard pour chaque paire et chaque juge (tirage reproductible à partir de la paire et du nom du juge) et conservées avec le jugement.
+- **Contrôles** : sortie JSON validée (valeurs permises, au moins une citation, confiance entre 0 et 1, justification de 80 mots au plus). Une sortie hors contrat ou une citation introuvable entraîne le rejet du jugement ; il est conservé avec son motif.
+- **Deux juges** : `qwen3-30b-a3b` (famille Qwen, Alibaba) et `llama3.2` (3 milliards de paramètres, famille Llama, Meta), servis en local par llama.cpp. Ce sont les deux seules familles de modèles présentes sur la machine : le second juge est petit, et la comparaison sur le jeu de référence (`docs/evaluation/juges.md`) dira s'il faut en installer un plus solide.
+- **Verdict publié** : seulement si les deux juges valides donnent la même relation, ou après relecture humaine (table `reviews`). Sinon, la paire attend une relecture : désaccord, jugement rejeté ou manquant. Jamais de vote à la majorité automatique.
+
+## Jeu de référence
+
+`eval/gold_retraites.csv` : 120 paires tirées parmi les paires à juger des 2 scrutins les mieux classés de chaque mesure, tour à tour dans chaque groupe pour qu'aucun ne soit sur-représenté (graine 0). Annotation provisoire, faite à l'aveugle sur le texte anonymisé avec la fin du débat qui précède le vote : deux annotateurs indépendants (Claude), un arbitrage en cas de désaccord, colonne `annotation` à `claude-provisoire`. Elle doit être relue par un humain avant de servir de référence publiée. Code : `src/concordance/eval/run.py` (tirage et mesures d'accord), `src/concordance/eval/bias.py` (répartition par groupe, test contrefactuel).
+
 ## Présentation
 
 - Le rendu doit être lisible par quelqu'un qui ne suit pas la politique : une phrase simple, les chiffres complets, la source officielle à un clic, chaque terme technique expliqué (amendement, motion de censure, commission mixte paritaire...).
