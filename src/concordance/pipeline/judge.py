@@ -23,18 +23,19 @@ from concordance.models import Nature
 from concordance.pipeline.anonymize import Dictionary, anonymize, build_dictionary
 from concordance.pipeline.retrieve import perimeter, search
 
-PROMPT_VERSION = "judge_v1"
+PROMPT_VERSION = "judge_v2"
 SYSTEM, MESSAGE = re.sub(r"^<!--.*?-->\n", "", (Path(__file__).parents[3] / "prompts" / f"{PROMPT_VERSION}.md")
                          .read_text(encoding="utf-8"), flags=re.S).split("\n---MESSAGE---\n")
 # Deux familles, Qwen (Alibaba) et Llama (Meta), chacune servie par llama.cpp (API compatible OpenAI) :
-# variable d'environnement de l'adresse, adresse par défaut. Choix dans docs/evaluation/juges.md.
+# variable d'environnement de l'adresse, adresse par défaut. Évaluation : docs/evaluation/juges_<consigne>.md.
 JUDGES = {"qwen3-30b-a3b": ("LLM_URL", "http://localhost:8012"), "llama3.2": ("JUGE2_URL", "http://localhost:8013")}
 Relation = Literal["dans_le_sens", "contraire", "ambigu", "hors_sujet"]
+Effect = Literal["rapproche", "eloigne", "ambigu", "hors_sujet"]
 AMENDMENT_MAX = 3000  # caractères du dispositif et de l'exposé envoyés au juge
 CHAMBERS = {"an": "Assemblée nationale", "senat": "Sénat", "pe": "Parlement européen"}
 # Les modèles recopient l'apostrophe typographique et les espaces insécables en caractères simples : le texte envoyé
 # (contre lequel les citations sont vérifiées) les remplace avant l'anonymisation. La fiche publie le texte d'origine.
-TYPOGRAPHY = str.maketrans({"’": "'", " ": " ", " ": " "})
+TYPOGRAPHY = str.maketrans({"’": "'", "\u00a0": " ", "\u202f": " "})
 
 
 class Citation(BaseModel):
@@ -44,10 +45,11 @@ class Citation(BaseModel):
 
 
 class Verdict(BaseModel):
-    """Sortie du juge. Ordre des champs : le modèle cite et justifie avant de conclure."""
+    """Sortie du juge. Ordre des champs : le modèle cite, établit l'effet du texte et justifie avant de conclure."""
     model_config = ConfigDict(extra="forbid")
     nature_du_vote: Nature
     citations: list[Citation] = Field(min_length=1)
+    effet_du_texte: Effect
     justification: str = Field(max_length=520)  # borne la génération ; la règle du contrat reste 80 mots
     relation: Relation
     confiance: float = Field(ge=0, le=1)
@@ -72,6 +74,19 @@ class Pair(BaseModel):
     scrutin: str
     position: str  # chiffres seuls, l'étiquette du groupe est ajoutée par render
     explication: str | None
+    pour: int
+    contre: int
+    abstention: int
+    majorite: Literal["pour", "contre"]
+
+
+def expected(effect: str, pair: Pair) -> str:
+    """Relation qui découle de l'effet du texte et du vote du groupe (consigne judge_v2, étape 2)."""
+    if effect in ("ambigu", "hors_sujet"):
+        return effect
+    if max(pair.pour, pair.contre, pair.abstention) * 2 <= pair.pour + pair.contre + pair.abstention:
+        return "ambigu"  # groupe partagé
+    return "dans_le_sens" if (effect == "rapproche") == (pair.majorite == "pour") else "contraire"
 
 
 def render(pair: Pair, dictionary: Dictionary, rng: random.Random) -> tuple[str, dict[str, list[int]]]:
@@ -85,9 +100,10 @@ def render(pair: Pair, dictionary: Dictionary, rng: random.Random) -> tuple[str,
     return message, mapping
 
 
-def check(raw: str, message: str) -> tuple[Verdict | None, str | None]:
-    """Verdict validé et motif de rejet : réponse hors contrat, ou citation absente du texte envoyé au juge.
-    La section indiquée par « source » n'est pas contrôlée : seule compte la présence mot pour mot (CLAUDE.md, règle 4)."""
+def check(raw: str, message: str, pair: Pair) -> tuple[Verdict | None, str | None]:
+    """Verdict validé et motif de rejet : réponse hors contrat, citation absente du texte envoyé au juge, ou relation qui
+    ne découle pas de l'effet du texte et du vote. La section indiquée par « source » n'est pas contrôlée : seule compte
+    la présence mot pour mot (CLAUDE.md, règle 4)."""
     try:
         verdict = Verdict.model_validate_json(raw)
     except ValidationError as e:
@@ -95,6 +111,8 @@ def check(raw: str, message: str) -> tuple[Verdict | None, str | None]:
     for c in verdict.citations:
         if c.extrait not in message:
             return verdict, f"citation introuvable dans le texte envoyé : {c.extrait[:300]}"
+    if verdict.relation != (want := expected(verdict.effet_du_texte, pair)):
+        return verdict, f"relation incohérente : effet « {verdict.effet_du_texte} » et vote du groupe donnent « {want} »"
     return verdict, None
 
 
@@ -116,7 +134,7 @@ def judge_pair(judge: str, pair: Pair, dictionary: Dictionary, seed: str = "") -
     """Un jugement, prêt à être inséré dans concordance.judgments. Étiquettes tirées par paire, juge et graine."""
     rng = random.Random(f"{pair.measure_id}-{pair.ballot_id}-{pair.group_id}-{judge}{seed}")
     message, mapping = render(pair, dictionary, rng)
-    verdict, rejet = check(ask(judge, message), message)
+    verdict, rejet = check(ask(judge, message), message, pair)
     fields = verdict.model_dump() if verdict else {}
     if verdict:
         fields["citations"] = Jsonb(fields["citations"])
@@ -175,7 +193,8 @@ def pairs(conn: psycopg.Connection[Any], limit: int, measure: int | None = None)
                                                 "where ballot_id = %s and group_id = %s order by id", (ballot_id, group_id))]
             out.append(Pair(measure_id=measure_id, ballot_id=ballot_id, group_id=group_id, mesure=citation,
                             scrutin=scrutin, position=figures(pour, contre, abst, nv, membres, majority),
-                            explication="\n\n".join(texts) or None))
+                            explication="\n\n".join(texts) or None, pour=pour, contre=contre, abstention=abst,
+                            majorite=majority))
     return out
 
 
@@ -226,12 +245,16 @@ def main() -> None:
             "select measure_id, ballot_id, group_id from concordance.judgments where model = %s and prompt_version = %s",
             (args.juge, PROMPT_VERSION)).fetchall())
         todo = [p for p in pairs(conn, args.limite, args.mesure) if (p.measure_id, p.ballot_id, p.group_id) not in done]
-        print(f"{len(todo)} paires à juger par {args.juge}", flush=True)
-        # Plusieurs requêtes en file : le serveur les traite une à une, mais n'attend plus entre deux paires.
-        with ThreadPoolExecutor(args.paralleles) as pool:
-            for i, row in enumerate(pool.map(lambda p: attempt(args.juge, p, dictionary), todo), 1):
-                if row:
-                    save(conn, row, i, len(todo))
+        run(conn, args.juge, todo, dictionary, args.paralleles)
+
+
+def run(conn: psycopg.Connection[Any], judge: str, todo: list[Pair], dictionary: Dictionary, parallel: int) -> None:
+    print(f"{len(todo)} paires à juger par {judge}", flush=True)
+    # Plusieurs requêtes en file : le serveur les traite une à une, mais n'attend plus entre deux paires.
+    with ThreadPoolExecutor(parallel) as pool:
+        for i, row in enumerate(pool.map(lambda p: attempt(judge, p, dictionary), todo), 1):
+            if row:
+                save(conn, row, i, len(todo))
 
 
 def attempt(judge: str, pair: Pair, dictionary: Dictionary) -> dict[str, Any] | None:
